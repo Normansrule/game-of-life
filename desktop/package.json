@@ -44,6 +44,9 @@
         "portable"
       ]
     },
+    "portable": {
+      "artifactName": "Life-Tree-${version}-win-${arch}-portable.${ext}"
+    },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true

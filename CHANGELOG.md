@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- **Progress tracker** in the README: a roadmap checklist grouped by area, an animated SVG of progress per area (`docs/media/progress.svg`), a summary table, and a release timeline. `npm run progress` regenerates it from the checklist; CI fails if it is out of date. 71 tests in total.
+- Desktop: the Windows portable `.exe` gets its own file name, so it no longer overwrites the installer in a release.
+
 ## 7.1.0
 
 - **Web app**: the site is now an installable, offline-capable app. A service worker generated at build time precaches every file, a web manifest and icons make it installable, and a new **⬇ Get the app** button opens a dialog with *Install in this browser*, the web link and downloads for each operating system.
