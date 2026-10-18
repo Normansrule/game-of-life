@@ -264,7 +264,7 @@ desktop/           Electron shell and installer config for the desktop app
 
 ## Web app and desktop app
 
-**Web app.** `.github/workflows/pages.yml` builds the site on every push to `main` and publishes it to GitHub Pages (in the repository, **Settings → Pages → Source** must be **GitHub Actions**). The build also writes a service worker (`sw.js`) that precaches every file, and `public/manifest.webmanifest` makes the site installable. `npm run build && npm run preview` shows the installable build locally.
+**Web app.** `.github/workflows/pages.yml` builds the site on every push to `main` and publishes it to GitHub Pages. Pages has to be switched to GitHub Actions once, which you can do from a terminal with `gh api -X POST repos/<owner>/<repo>/pages -f build_type=workflow` (or in **Settings → Pages → Source**). The build also writes a service worker (`sw.js`) that precaches every file, and `public/manifest.webmanifest` makes the site installable. `npm run build && npm run preview` shows the installable build locally.
 
 **Desktop app.** `desktop/` wraps the same build in [Electron](https://www.electronjs.org/). It serves the files from a private `app://` scheme, so Web Workers and module scripts behave exactly as on the web.
 
