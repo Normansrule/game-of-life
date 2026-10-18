@@ -5,7 +5,7 @@
 [![Desktop apps](https://github.com/Normansrule/game-of-life/actions/workflows/release.yml/badge.svg)](https://github.com/Normansrule/game-of-life/actions/workflows/release.yml)
 [![Latest release](https://img.shields.io/github/v/release/Normansrule/game-of-life?label=download)](https://github.com/Normansrule/game-of-life/releases/latest)
 
-**[▶ Open the web app](https://normansrule.github.io/game-of-life/)** · **[⬇ Download for Windows, macOS or Linux](https://github.com/Normansrule/game-of-life/releases/latest)** · [Install it as an app](#use-it-three-ways)
+**[▶ Open the web app](https://normansrule.github.io/game-of-life/)** · **[⬇ Download for Windows, macOS or Linux](https://github.com/Normansrule/game-of-life/releases/latest)** · [Install it as an app](#use-it-three-ways) · [Progress](#progress-tracker)
 
 An interactive, GPU-rendered exploration of **Conway's Game of Life**: a fast simulator you can draw on, a **lineage tree** that traces how every object in a pattern is born, splits, collides and dies, **state-space trees** that map every possible configuration of a small universe, a **3D spacetime** view, a **Hashlife** engine that jumps billions of generations, a **rule atlas** that classifies Life-like rules live, an **evolution lab** where a genetic algorithm breeds cellular automata and draws their family tree, a page of **mathematics** with live charts, and eighteen running demos of **real-world applications** of cellular automata, from heart arrhythmias and wind tunnels to phantom traffic jams and artificial organisms.
 
@@ -36,6 +36,99 @@ flowchart LR
 ```
 
 ![Radial lineage tree of the R-pentomino](docs/screenshots/lineage-radial.png)
+
+## Progress tracker
+
+<!-- progress:start -->
+![Progress by area](docs/media/progress.svg)
+
+**31 of 41 roadmap items done (76%).** Generated from the checklist below by `npm run progress`.
+
+| Area | Progress | Done | Up next |
+| --- | --- | --- | --- |
+| Simulator | ▰▰▰▰▰▰▰▱▱▱ 71% | 5 / 7 | Share a pattern as a link; Load patterns straight from LifeWiki |
+| Trees and time | ▰▰▰▰▰▰▰▱▱▱ 71% | 5 / 7 | Hashlife in a Web Worker for huge patterns; Export any tree as an SVG file |
+| Math | ▰▰▰▰▰▰▰▰▰▱ 89% | 8 / 9 | Glider synthesis: building patterns from colliding gliders |
+| Applications | ▰▰▰▰▰▰▰▰▱▱ 75% | 3 / 4 | Neural cellular automata that regrow an image |
+| Games and labs | ▰▰▰▰▰▰▰▰▱▱ 75% | 3 / 4 | A daily puzzle |
+| Apps and publishing | ▰▰▰▰▰▰▰▱▱▱ 70% | 7 / 10 | Intel Mac build; Code-signed installers |
+<!-- progress:end -->
+
+### Releases
+
+```mermaid
+timeline
+  title Life Tree releases
+  v1 : Simulator, lineage tree, basins, math, 7 demos
+  v2 : 3D spacetime, Hashlife deep time, soup census
+  v3 : Heart, wind tunnel, sandpile, Wa-Tor, snowflakes
+  v4 : Rule atlas, edge of chaos, traffic, Lenia
+  v5 : Evolution lab, GKL, rule family tree
+  v6 : Puzzles, every 4×4 pattern
+  v7 : Ancestors, running time backwards
+  v7.1 : Web app, desktop apps, animated README
+```
+
+Full details in [CHANGELOG.md](CHANGELOG.md).
+
+### Roadmap
+
+Tick a box here and run `npm run progress` to redraw the bars above. CI fails if they are out of date.
+
+<!-- roadmap:start -->
+#### Simulator
+- [x] WebGL2 renderer with age colours, trails and glow (Canvas 2D fallback)
+- [x] Draw, erase, pan, zoom and pinch on touch screens
+- [x] 27-pattern library, 12 rule presets and any B/S rule
+- [x] RLE and plaintext import and export
+- [x] PNG screenshots and WebM video recording
+- [ ] Share a pattern as a link
+- [ ] Load patterns straight from LifeWiki
+
+#### Trees and time
+- [x] Lineage tree: upward, radial and timeline layouts
+- [x] State-space trees (basins of attraction) on small tori
+- [x] 3D spacetime with instanced cubes
+- [x] Hashlife deep time to 2^32 generations and beyond
+- [x] Ancestors: parent search and a family tree back in time
+- [ ] Hashlife in a Web Worker for huge patterns
+- [ ] Export any tree as an SVG file
+
+#### Math
+- [x] Mean-field theory, entropy, damage spreading, speed of light
+- [x] Garden of Eden theorem and the replicator rule over F2
+- [x] Soup census with a Zipf fit
+- [x] Sandpile group and self-organised criticality
+- [x] Rule space and the edge of chaos
+- [x] Evolving computation (density classification)
+- [x] Every pattern in a 4×4 box (Burnside, 8548 fates)
+- [x] Running time backwards (2^25 pasts census)
+- [ ] Glider synthesis: building patterns from colliding gliders
+
+#### Applications
+- [x] The original nine demos (caves, fires, epidemics, Rule 30 and more)
+- [x] Heart, wind tunnel, sandpile, Wa-Tor and snowflakes
+- [x] Traffic, segregation, chemical waves and Lenia
+- [ ] Neural cellular automata that regrow an image
+
+#### Games and labs
+- [x] Rule atlas with live Wolfram classes
+- [x] Evolution lab with a genetic algorithm and family tree
+- [x] Ten puzzles checked by the engine
+- [ ] A daily puzzle
+
+#### Apps and publishing
+- [x] Public GitHub repo with CI
+- [x] Web app live on GitHub Pages
+- [x] Installable, offline web app (PWA)
+- [x] Desktop apps for Windows, macOS and Linux built in CI
+- [x] First release with downloads (v7.1.0)
+- [x] Animated README with GIFs and diagrams
+- [x] Progress tracker in the README
+- [ ] Intel Mac build
+- [ ] Code-signed installers
+- [ ] Automatic updates in the desktop app
+<!-- roadmap:end -->
 
 ## Features
 
