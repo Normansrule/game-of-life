@@ -1,5 +1,11 @@
 # Changelog
 
+## 7.1.0
+
+- **Web app**: the site is now an installable, offline-capable app. A service worker generated at build time precaches every file, a web manifest and icons make it installable, and a new **⬇ Get the app** button opens a dialog with *Install in this browser*, the web link and downloads for each operating system.
+- **Desktop app**: `desktop/` wraps the build in Electron for Windows (`.exe` installer and portable), macOS (`.dmg`, `.zip`) and Linux (`.AppImage`, `.deb`). A new `release.yml` workflow builds all three on GitHub Actions and publishes them when a `v*` tag is pushed.
+- **README**: ten animated GIFs recorded from the running app (simulator, 3D spacetime, ancestors, rule atlas, evolution, heart, wind tunnel, snowflake, Lenia, traffic), Mermaid diagrams of the architecture, the lineage algorithm and the build-to-app pipeline, badges, and a "use it three ways" section.
+
 ## 7.0.0
 
 - New **Ancestors** tab: draw a pattern and a backtracking search lists its parents (patterns that become it in one step) in a box around it, smallest first. Click a parent to search further back; the result is a family tree that grows back in time, with curves from each pattern to its parents. **Rewind** follows the smallest parent five generations at once. Honest reporting when the search finds none, stops at 400, or gives up.

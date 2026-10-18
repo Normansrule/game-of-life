@@ -11,6 +11,7 @@ import { createEvolveView } from './ui/evolveView';
 import { createPuzzlesView } from './ui/puzzlesView';
 import { createAncestorsView } from './ui/ancestorsView';
 import { on } from './ui/bus';
+import { setupGetApp } from './ui/getApp';
 import { h } from './ui/dom';
 
 interface View {
@@ -71,3 +72,4 @@ on('navigate', ({ route }) => {
 // Lineage view must exist before the simulator can send it a pattern.
 for (const r of ['lineage', 'space', 'deep']) ensure(r).el.hidden = true;
 show(routeFromHash());
+setupGetApp(document.getElementById('get-app'));

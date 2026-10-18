@@ -389,3 +389,16 @@ button.link { background: none; border: none; padding: 0; color: var(--accent); 
 .past-card { display: flex; flex-direction: column; align-items: center; gap: 2px; }
 canvas.past-win { width: 54px; height: 54px; }
 .anc-tree-panel { min-width: 0; }
+
+/* ---- Get the app ---- */
+.get-app { margin-left: auto; white-space: nowrap; padding: 6px 12px; border-radius: 999px; font-size: 0.9rem; }
+.app-dialog { max-width: 520px; width: calc(100% - 32px); background: var(--panel-solid); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px 24px; }
+.app-dialog::backdrop { background: rgba(2, 4, 10, 0.7); backdrop-filter: blur(3px); }
+.app-dialog h2 { margin: 0 0 8px; }
+.app-dialog h3 { margin: 18px 0 6px; font-size: 1rem; color: var(--accent); }
+.app-dialog form { position: absolute; right: 12px; top: 10px; }
+.app-close { border: none; background: none; font-size: 24px; line-height: 1; cursor: pointer; color: var(--muted); }
+.app-dls { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 8px; }
+@media (max-width: 520px) { .app-dls { grid-template-columns: 1fr; } }
+.app-dl { display: flex; flex-direction: column; gap: 2px; padding: 10px; border-radius: 10px; border: 1px solid var(--border); text-decoration: none; color: var(--text); background: rgba(255, 255, 255, 0.03); }
+.app-dl:hover, .app-dl.mine { border-color: var(--accent); }
