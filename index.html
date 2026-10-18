@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Life Tree: Game of Life explorer</title>
     <meta name="description" content="Conway's Game of Life with GPU rendering, lineage trees, basins of attraction, the mathematics behind it and real-world applications." />
+    <meta name="theme-color" content="#060913" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 3 3'%3E%3Crect width='3' height='3' fill='%23070b16'/%3E%3Cpath fill='%237df9ff' d='M1 0h1v1H1zM2 1h1v1H2zM0 2h3v1H0z'/%3E%3C/svg%3E" />
   </head>
   <body>
@@ -26,6 +29,7 @@
         <a href="#math" data-route="math">Math</a>
         <a href="#apps" data-route="apps">Applications</a>
       </nav>
+      <button class="get-app" id="get-app" type="button" title="Install Life Tree or download the desktop app">⬇ Get the app</button>
     </header>
     <main id="app"></main>
     <script type="module" src="/src/main.ts"></script>
