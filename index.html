@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Life Tree: Game of Life explorer</title>
+    <meta name="description" content="Conway's Game of Life with GPU rendering, lineage trees, basins of attraction, the mathematics behind it and real-world applications." />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 3 3'%3E%3Crect width='3' height='3' fill='%23070b16'/%3E%3Cpath fill='%237df9ff' d='M1 0h1v1H1zM2 1h1v1H2zM0 2h3v1H0z'/%3E%3C/svg%3E" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="#sim" aria-label="Life Tree home">
+        <svg viewBox="0 0 3 3" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M1 0h1v1H1zM2 1h1v1H2zM0 2h3v1H0z" /></svg>
+        <span>Life<b>Tree</b></span>
+      </a>
+      <nav class="tabs" role="tablist">
+        <a href="#sim" data-route="sim">Simulator</a>
+        <a href="#lineage" data-route="lineage">Lineage tree</a>
+        <a href="#space" data-route="space">3D spacetime</a>
+        <a href="#deep" data-route="deep">Deep time</a>
+        <a href="#basins" data-route="basins">State-space trees</a>
+        <a href="#ancestors" data-route="ancestors">Ancestors</a>
+        <a href="#atlas" data-route="atlas">Rule atlas</a>
+        <a href="#evolve" data-route="evolve">Evolution</a>
+        <a href="#puzzles" data-route="puzzles">Puzzles</a>
+        <a href="#math" data-route="math">Math</a>
+        <a href="#apps" data-route="apps">Applications</a>
+      </nav>
+    </header>
+    <main id="app"></main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

@@ -1,0 +1,24 @@
+{
+  "name": "game-of-life-tree",
+  "version": "7.0.0",
+  "private": true,
+  "description": "Conway's Game of Life explorer with a lineage tree, basin-of-attraction trees, the math behind it, and real-world applications.",
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "katex": "^0.16.22"
+  },
+  "devDependencies": {
+    "@types/katex": "^0.16.7",
+    "typescript": "^5.9.3",
+    "vite": "^8.0.0",
+    "vitest": "^5.0.0"
+  }
+}
