@@ -71,32 +71,37 @@ export function renderSvg(areas: Area[]): string {
   const done = areas.reduce((s, a) => s + a.done, 0), total = areas.reduce((s, a) => s + a.total, 0);
   const W = 720, rowH = 34, top = 92, barX = 210, barW = 380;
   const H = top + areas.length * rowH + 18;
-  const colours = ['#7df9ff', '#c084fc', '#f472b6', '#facc15', '#4ade80', '#60a5fa', '#fb923c'];
   const bar = (x: number, y: number, w: number, h: number, frac: number, fill: string, delay: number) =>
-    `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${h / 2}" fill="#1b2340"/>` +
-    (frac > 0 ? `<rect class="grow" style="animation-delay:${delay.toFixed(2)}s" x="${x}" y="${y}" width="${Math.max(h, w * frac).toFixed(1)}" height="${h}" rx="${h / 2}" fill="${fill}"/>` : '');
+    `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${h / 2}" class="track"/>` +
+    (frac > 0 ? `<rect class="grow" style="animation-delay:${delay.toFixed(2)}s" x="${x}" y="${y}" width="${Math.max(h, w * frac).toFixed(1)}" height="${h}" rx="${h / 2}" class="${fill}"/>` : '');
   const rows = areas.map((a, i) => {
     const y = top + i * rowH;
     return `<text x="24" y="${y + 14}" class="label">${esc(a.name)}</text>` +
-      bar(barX, y + 2, barW, 14, a.total ? a.done / a.total : 0, colours[i % colours.length], 0.3 + i * 0.12) +
+      bar(barX, y + 2, barW, 14, a.total ? a.done / a.total : 0, 'fill', 0.3 + i * 0.12) +
       `<text x="${barX + barW + 16}" y="${y + 14}" class="num">${pct(a.done, a.total)}%  <tspan class="dim">${a.done}/${a.total}</tspan></text>`;
   }).join('\n  ');
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Roadmap progress: ${done} of ${total} items done">
   <style>
-    text { font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; fill: #e6ecff; }
+    /* Common Room colours: ink and slate on kaya, with a lamplight version for dark mode. */
+    .bg { fill: #EBD3A1; } .track { fill: rgba(47, 33, 14, 0.14); } .fill { fill: #1E1D1C; } .star { fill: #2F210E; }
+    text { font-family: 'Bricolage Grotesque', -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; fill: #2F210E; }
     .title { font-size: 18px; font-weight: 600; }
     .label { font-size: 14px; }
     .num { font-size: 13px; font-family: ui-monospace, Menlo, Consolas, monospace; }
-    .dim { fill: #8b95b8; }
+    .dim { fill: #6B5432; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #241A11; } .track { fill: rgba(241, 223, 188, 0.14); } .fill { fill: #F1DFBC; } .star { fill: #F1DFBC; }
+      text { fill: #F1DFBC; } .dim { fill: #B59D78; }
+    }
     .grow { transform-box: fill-box; transform-origin: left; animation: grow 1.1s cubic-bezier(.2,.8,.2,1) both; }
     @keyframes grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
     @media (prefers-reduced-motion: reduce) { .grow { animation: none; } }
   </style>
-  <defs><linearGradient id="all" x1="0" x2="1"><stop offset="0" stop-color="#7df9ff"/><stop offset="1" stop-color="#c084fc"/></linearGradient></defs>
-  <rect width="${W}" height="${H}" rx="14" fill="#060913"/>
-  <text x="24" y="36" class="title">Life Tree roadmap</text>
+  <rect width="${W}" height="${H}" rx="8" class="bg"/>
+  <circle cx="28" cy="30" r="4" class="star"/>
+  <text x="42" y="36" class="title">Life Tree roadmap</text>
   <text x="${W - 24}" y="36" class="num" text-anchor="end">${done} / ${total} done · ${pct(done, total)}%</text>
-  ${bar(24, 50, W - 48, 18, total ? done / total : 0, 'url(#all)', 0)}
+  ${bar(24, 50, W - 48, 18, total ? done / total : 0, 'fill', 0)}
   ${rows}
 </svg>
 `;

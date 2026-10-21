@@ -10,6 +10,7 @@ import {
 } from '../engine/basins';
 import { RULE_PRESETS } from '../engine/rules';
 import { fitCanvas, fmt, h, select } from './dom';
+import { alpha, onTheme, rgb, tok } from './theme';
 
 interface Group {
   key: string;
@@ -22,10 +23,17 @@ interface Group {
 
 const SIZES = ['3x3', '3x4', '4x4', '3x5', '3x6'];
 
-function depthColor(d: number, max: number, a = 1): string {
+/**
+ * Node colours by meaning, shared by the canvas and the legend:
+ * the attractor cycle is ink, Gardens of Eden (no predecessor) are shu red,
+ * and transient states run from indigo (next to the cycle) to ochre (far out).
+ */
+const NODE_TOKENS = { cycle: '--ink', eden: '--data-shu', near: '--data-indigo', far: '--data-ochre' };
+
+function depthColor(d: number, max: number): string {
   const t = max ? d / max : 0;
-  const hue = 185 + t * 140; // cyan -> violet -> pink
-  return `hsla(${hue}, 90%, ${66 - t * 6}%, ${a})`;
+  const a = rgb(NODE_TOKENS.near), b = rgb(NODE_TOKENS.far);
+  return `rgb(${Math.round(a[0] + (b[0] - a[0]) * t)},${Math.round(a[1] + (b[1] - a[1]) * t)},${Math.round(a[2] + (b[2] - a[2]) * t)})`;
 }
 
 export function createBasinView(root: HTMLElement) {
@@ -46,7 +54,7 @@ export function createBasinView(root: HTMLElement) {
   const statsEl = h('div.summary');
   const listEl = h('div.basin-list');
   const stateEl = h('div.state-info');
-  const backBtn = h('button', { onclick: () => { mode = 'field'; dirty = true; backBtn.hidden = true; } }, '← All basins');
+  const backBtn = h('button', { onclick: () => { mode = 'field'; dirty = true; backBtn.hidden = true; } }, 'Back to all basins');
   backBtn.hidden = true;
   const title = h('div.basin-title');
 
@@ -57,6 +65,11 @@ export function createBasinView(root: HTMLElement) {
     h('label', {}, 'Rule ', select(RULE_PRESETS.filter((r) => !r.rule.startsWith('B0')).map((r) => ({ value: r.rule, label: `${r.name} (${r.rule})` })), rule, (v) => { rule = v; compute(); })),
     backBtn,
     title,
+    h('div.legend', {},
+      ...([['cycle', 'Attractor cycle'], ['near', 'Close to the cycle'], ['far', 'Far from it'], ['eden', 'Garden of Eden']] as const).map(([k, label]) =>
+        h('span', {}, h('i', { style: `background:var(${NODE_TOKENS[k]})` }), label),
+      ),
+    ),
   );
 
   root.append(
@@ -173,8 +186,8 @@ export function createBasinView(root: HTMLElement) {
         const r = (Math.min(cw, ch) / 2 - 14) * (0.35 + 0.65 * (Math.log(g.size + 1) / maxLog));
         fieldCells.push({ gi: i, x: cx, y: cy, r: Math.min(cw, ch) / 2 });
         drawBasin(ctx, fieldLayout(g.basins[0]), cx, cy, r, false);
-        ctx.fillStyle = 'rgba(200,210,240,0.7)';
-        ctx.font = '10px ui-monospace, monospace';
+        ctx.fillStyle = tok('--muted');
+        ctx.font = `11px ${tok('--ui')}`;
         ctx.textAlign = 'center';
         ctx.fillText(`${fmt(g.size)}${g.basins.length > 1 ? ` ×${g.basins.length}` : ''}`, cx, cy + Math.min(cw, ch) / 2 - 3);
       });
@@ -187,26 +200,26 @@ export function createBasinView(root: HTMLElement) {
     const s = space!;
     const n = l.nodes.length;
     const max = Math.max(1, l.maxDepth);
-    // Edges, batched by depth for colour.
-    const byDepth: number[][] = Array.from({ length: max + 1 }, () => []);
-    for (let i = 0; i < n; i++) if (l.parentIndex[i] >= 0) byDepth[s.depth[l.nodes[i]]].push(i);
+    // Edges in ink, all in one path.
     ctx.lineWidth = detailed ? (n > 5000 ? 0.5 : 1) : 0.6;
-    for (let d = 0; d <= max; d++) {
-      ctx.strokeStyle = depthColor(d, max, n > 5000 ? 0.45 : 0.75);
-      ctx.beginPath();
-      for (const i of byDepth[d]) {
-        const p = l.parentIndex[i];
-        ctx.moveTo(cx + l.x[i] * R, cy + l.y[i] * R);
-        ctx.lineTo(cx + l.x[p] * R, cy + l.y[p] * R);
-      }
-      ctx.stroke();
+    ctx.strokeStyle = alpha('--ink', n > 5000 ? 0.22 : 0.38);
+    ctx.beginPath();
+    for (let i = 0; i < n; i++) {
+      const p = l.parentIndex[i];
+      if (p < 0) continue;
+      ctx.moveTo(cx + l.x[i] * R, cy + l.y[i] * R);
+      ctx.lineTo(cx + l.x[p] * R, cy + l.y[p] * R);
     }
+    ctx.stroke();
+    // Depth colours are computed once per draw, not per node.
+    const ramp = Array.from({ length: max + 1 }, (_, d) => depthColor(d, max));
+    const cycleCol = tok(NODE_TOKENS.cycle), edenCol = tok(NODE_TOKENS.eden);
     // Nodes.
     const dot = detailed ? (n > 5000 ? 0.9 : n > 500 ? 1.6 : 3) : n > 500 ? 0.6 : 1.2;
     for (let i = 0; i < n; i++) {
       const st = l.nodes[i];
       const goe = !s.indeg[st];
-      ctx.fillStyle = s.onCycle[st] ? '#ffffff' : goe ? 'rgba(255,79,163,0.9)' : depthColor(s.depth[st], max);
+      ctx.fillStyle = s.onCycle[st] ? cycleCol : goe ? edenCol : ramp[s.depth[st]];
       const r = s.onCycle[st] ? dot * 2.2 + 1 : dot;
       ctx.beginPath();
       ctx.arc(cx + l.x[i] * R, cy + l.y[i] * R, r, 0, Math.PI * 2);
@@ -219,7 +232,7 @@ export function createBasinView(root: HTMLElement) {
         const idx = new Map<number, number>();
         l.nodes.forEach((st, i) => idx.set(st, i));
         let st = hoverState;
-        ctx.strokeStyle = '#ffffff';
+        ctx.strokeStyle = tok('--ink');
         ctx.lineWidth = 2.5;
         ctx.beginPath();
         let i = idx.get(st);
@@ -238,7 +251,7 @@ export function createBasinView(root: HTMLElement) {
 
   function showState(st: number) {
     if (!space || st < 0) {
-      stateEl.replaceChildren(h('p.blurb', {}, 'Hover a dot. White = attractor cycle, pink = Garden of Eden (no predecessor). The white path shows where that state goes.'));
+      stateEl.replaceChildren(h('p.blurb', {}, 'Hover a dot. The big ink dots are the attractor cycle, red ones are Gardens of Eden (no predecessor). The thick line shows where that state goes.'));
       return;
     }
     const s = space;
@@ -292,6 +305,7 @@ export function createBasinView(root: HTMLElement) {
     if (c) openGroup(c.gi);
   });
   window.addEventListener('resize', () => (dirty = true));
+  onTheme(() => (dirty = true));
 
   function frame() {
     requestAnimationFrame(frame);

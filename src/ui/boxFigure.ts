@@ -7,13 +7,19 @@ import { type BoxRecord, OUTCOME_INFO, type Outcome, maskToCells } from '../engi
 import { type BoxCommand, type BoxMessage, createBoxRunner } from './boxRunner';
 import { emit } from './bus';
 import { drawChart } from './chart';
-import { fitCanvas, h, readVar } from './dom';
+import { fitCanvas, h } from './dom';
+import { alpha, onTheme, tok } from './theme';
 import { drawThumb } from './thumb';
 
 const N = 4;
 const MAX_GEN = 6000;
 const CACHE_KEY = 'life-tree:box4:v1';
 const OUTCOMES = Object.keys(OUTCOME_INFO) as Outcome[];
+/** Outcome colours from the data palette (the engine's own colours belong to the old design). */
+const OUTCOME_TOKEN: Record<Outcome, string> = {
+  vanishes: '--muted', flies: '--data-indigo', still: '--data-pine', oscillator: '--data-plum', gliders: '--data-ochre', unsettled: '--data-shu',
+};
+const outcomeVar = (o: Outcome) => `var(${OUTCOME_TOKEN[o]})`;
 
 type Port = { postMessage: (m: BoxCommand) => void; terminate: () => void };
 
@@ -24,7 +30,7 @@ export function createBoxFigures() {
   let started = false;
   let t0 = 0;
 
-  const status = h('span.mono', {}, 'Waiting to start: scroll here or press Run.');
+  const status = h('span.readout', {}, 'Waiting to start: scroll here or press Run.');
   const bar = h('div.box-bar');
   const legend = h('div.box-legend');
   const byCells = h('canvas.chart.tall');
@@ -115,16 +121,17 @@ export function createBoxFigures() {
     draw();
   }
   requestAnimationFrame(frame);
+  onTheme(() => { galleryKey = ''; dirty = true; });
 
   function draw() {
     const counts = new Map<Outcome, number>(OUTCOMES.map((o) => [o, 0]));
     for (const r of records) counts.set(r.outcome, counts.get(r.outcome)! + 1);
     const denom = Math.max(total, records.length, 1);
     bar.replaceChildren(...OUTCOMES.filter((o) => counts.get(o)).map((o) =>
-      h('span', { style: `width:${(counts.get(o)! / denom) * 100}%;background:${OUTCOME_INFO[o].colour}`, title: `${OUTCOME_INFO[o].label}: ${counts.get(o)}` })));
+      h('span', { style: `width:${(counts.get(o)! / denom) * 100}%;background:${outcomeVar(o)}`, title: `${OUTCOME_INFO[o].label}: ${counts.get(o)}` })));
     legend.replaceChildren(...OUTCOMES.filter((o) => o !== 'unsettled' || counts.get(o)).map((o) =>
-      h('div', {}, h('span.cls-dot', { style: `background:${OUTCOME_INFO[o].colour}` }), `${OUTCOME_INFO[o].label} `,
-        h('b.mono', {}, counts.get(o)!.toLocaleString()),
+      h('div', {}, h('span.cls-dot', { style: `background:${outcomeVar(o)}` }), `${OUTCOME_INFO[o].label} `,
+        h('b.readout', {}, counts.get(o)!.toLocaleString()),
         h('span.dim', {}, records.length ? ` (${((counts.get(o)! / records.length) * 100).toFixed(1)}%)` : ''))));
     drawByCells();
     drawLifespans();
@@ -138,20 +145,20 @@ export function createBoxFigures() {
     const W = byCells.clientWidth, H = byCells.clientHeight;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, W, H);
-    const muted = readVar('--muted') || '#8892a6';
+    const muted = tok('--muted');
     const padL = 40, padB = 34, padT = 10, padR = 10;
     const pw = W - padL - padR, ph = H - padT - padB;
     const K = N * N + 1;
     const tally: number[][] = Array.from({ length: K }, () => OUTCOMES.map(() => 0));
     for (const r of records) tally[r.cells][OUTCOMES.indexOf(r.outcome)]++;
     const bw = pw / K;
-    ctx.font = '11px ui-monospace, monospace';
+    ctx.font = `11px ${tok('--ui')}`;
     ctx.fillStyle = muted;
     ctx.textAlign = 'right';
     for (const v of [0, 50, 100]) {
       const y = padT + ph * (1 - v / 100);
       ctx.fillText(`${v}%`, padL - 6, y + 4);
-      ctx.strokeStyle = 'rgba(255,255,255,0.07)';
+      ctx.strokeStyle = alpha('--ink', 0.12);
       ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(W - padR, y); ctx.stroke();
     }
     ctx.textAlign = 'center';
@@ -161,7 +168,7 @@ export function createBoxFigures() {
       let y = padT + ph;
       if (sum) for (let o = 0; o < OUTCOMES.length; o++) {
         const hh = (tally[k][o] / sum) * ph;
-        ctx.fillStyle = OUTCOME_INFO[OUTCOMES[o]].colour;
+        ctx.fillStyle = tok(OUTCOME_TOKEN[OUTCOMES[o]]);
         ctx.fillRect(x + 1, y - hh, bw - 2, hh);
         y -= hh;
       }
@@ -181,7 +188,7 @@ export function createBoxFigures() {
     }
     const xs: number[] = [], ys: number[] = [];
     for (let b = 0; b < counts.length; b++) if (counts[b]) { xs.push((b + 0.5) / B); ys.push(counts[b]); }
-    drawChart(lifeChart, [{ values: ys, xs, color: '#c084fc', dots: true, width: 2, label: 'patterns per quarter-decade bin' }],
+    drawChart(lifeChart, [{ values: ys, xs, color: '--ink', dots: true, width: 2, label: 'patterns per quarter-decade bin' }],
       { logY: true, legend: true, xLabel: 'log₁₀(generations until settled + 1)' });
   }
 
@@ -207,7 +214,7 @@ export function createBoxFigures() {
       }, c,
       h('b', {}, `${r.lifespan.toLocaleString()} gens`),
       h('span.small.dim', {}, `${r.cells} cells → ${r.finalPopulation}${r.escaped ? ' + gliders' : ''}`));
-      requestAnimationFrame(() => drawThumb(c, cells, i === 0 ? '#ffffff' : OUTCOME_INFO[r.outcome].colour, 'rgba(0,0,0,0.3)', 4));
+      requestAnimationFrame(() => drawThumb(c, cells, i === 0 ? '--shell' : '--slate', '--board', 4));
       return card;
     }));
   }

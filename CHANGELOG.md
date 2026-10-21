@@ -1,7 +1,22 @@
 # Changelog
 
-## Unreleased
+## 8.1.0
 
+- **The board can step back in time.** B or ← goes back one generation, through the last few hundred (fewer on very large boards; turbo speed keeps none). **Undo and redo** (Ctrl+Z, Ctrl+Shift+Z, or the new toolbar buttons) cover drawing, stamping, clearing, random soups and loaded patterns.
+- **Puzzles play like a game of Go.** Stones drop onto a board with star points on a small spring, a solved board breathes once, and Watch it run colours stones by turn as the main board does. Each puzzle remembers your fewest-stone solution. The board plays fully from the keyboard (arrows, Space, Enter, W), with undo and redo. On a phone the puzzle list becomes a row of numbered stones so the board is on the first screen.
+- **One voice for figures.** Live numbers, status lines and statistics are set in the interface face with tabular figures instead of a monospace font, which is kept for code, rule strings and RLE. Boards say "stones" and "Generation 12 of 150" everywhere.
+- Chart keys now draw the mark they explain (same width and dash), and a chart with one series names it instead of showing a key. Charts use at most five gridlines.
+- Stone and button shadows are soft instead of hard offsets. Sparse far-out features in deep time are easier to see. The 3D spacetime camera pulls back as the tower grows, until you zoom yourself. The lineage loading message no longer overlaps its progress bar on a phone, and mouse-only hints are hidden on touch screens.
+- Census results mark spaceships that flew away as "(flew off)", as the lineage tree does, instead of with an arrow.
+
+## 8.0.0
+
+- **Common Room redesign**: the app and website now look like the Go board Conway first played Life on. Kaya-wood board, slate and clamshell stones, Bricolage Grotesque and Literata (self-hosted), a 24px spacing unit and spring motion that switches off under reduced motion.
+- **Daylight and Lamplight modes** that follow the system until you pick one. Canvases and charts read the same design tokens and repaint when the mode changes.
+- **Home page**, also the GitHub Pages site: a live 19×19 board that places and runs the R-pentomino, a glider, a pulsar and an acorn, and hands itself over on first touch or key press.
+- **The board** is drawn as a Go board in WebGL: stones on line crossings, star points, stones that spring down when born and lift away when they die.
+- Empty, loading and error states for every view; one crashing view no longer stops the others.
+- README rewritten with a Design section, and every screenshot and GIF re-recorded.
 - **Progress tracker** in the README: a roadmap checklist grouped by area, an animated SVG of progress per area (`docs/media/progress.svg`), a summary table, and a release timeline. `npm run progress` regenerates it from the checklist; CI fails if it is out of date. 71 tests in total.
 - Desktop: the Windows portable `.exe` gets its own file name, so it no longer overwrites the installer in a release.
 

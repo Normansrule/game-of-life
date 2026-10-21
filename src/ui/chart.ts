@@ -1,8 +1,10 @@
-import { fitCanvas, readVar } from './dom';
+import { fitCanvas } from './dom';
+import { alpha, parseColor, tok } from './theme';
 
 export interface Series {
   values: ArrayLike<number>;
-  color: string;
+  /** A CSS colour or a token name such as '--data-pine'. Defaults to --ink. */
+  color?: string;
   label?: string;
   width?: number;
   fill?: boolean;
@@ -35,8 +37,8 @@ export function drawChart(canvas: HTMLCanvasElement, series: Series[], o: ChartO
   const H = canvas.clientHeight;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, W, H);
-  const textColor = readVar('--muted') || '#8892a6';
-  const gridColor = readVar('--grid') || 'rgba(255,255,255,0.07)';
+  const textColor = tok('--muted');
+  const gridColor = tok('--rule');
   const padL = o.yLabel ? 58 : 40;
   const padB = o.xLabel ? 30 : 20;
   const padT = o.legend ? 22 : 8;
@@ -75,12 +77,12 @@ export function drawChart(canvas: HTMLCanvasElement, series: Series[], o: ChartO
       : padT + ph - ((y - yMin) / (yMax - yMin)) * ph;
   const tx = (x: number) => padL + ((x - xMin) / (xMax - xMin)) * pw;
 
-  ctx.font = '11px ui-monospace, SFMono-Regular, Menlo, monospace';
+  ctx.font = `11px ${tok('--ui')}`;
   ctx.fillStyle = textColor;
   ctx.strokeStyle = gridColor;
   ctx.lineWidth = 1;
   // Y ticks
-  const yt = o.logY ? logTicks(yMin, yMax) : niceTicks(yMin, yMax, Math.max(2, Math.floor(ph / 32)));
+  const yt = o.logY ? logTicks(yMin, yMax) : niceTicks(yMin, yMax, Math.max(2, Math.min(5, Math.floor(ph / 40))));
   ctx.textAlign = 'right';
   ctx.textBaseline = 'middle';
   for (const v of yt) {
@@ -112,7 +114,8 @@ export function drawChart(canvas: HTMLCanvasElement, series: Series[], o: ChartO
   ctx.rect(padL, padT, pw, ph);
   ctx.clip();
   for (const s of series) {
-    ctx.strokeStyle = s.color;
+    const col = seriesColor(s);
+    ctx.strokeStyle = col;
     ctx.lineWidth = s.width ?? 1.6;
     ctx.setLineDash(s.dash ?? []);
     ctx.beginPath();
@@ -130,14 +133,11 @@ export function drawChart(canvas: HTMLCanvasElement, series: Series[], o: ChartO
       ctx.lineTo(tx(s.xs ? s.xs[s.values.length - 1] : s.values.length - 1), padT + ph);
       ctx.lineTo(tx(s.xs ? s.xs[0] : 0), padT + ph);
       ctx.closePath();
-      const g = ctx.createLinearGradient(0, padT, 0, padT + ph);
-      g.addColorStop(0, withAlpha(s.color, 0.28));
-      g.addColorStop(1, withAlpha(s.color, 0.0));
-      ctx.fillStyle = g;
+      ctx.fillStyle = withAlpha(col, 0.12);
       ctx.fill();
     }
     if (s.dots) {
-      ctx.fillStyle = s.color;
+      ctx.fillStyle = col;
       for (let i = 0; i < s.values.length; i++) {
         ctx.beginPath();
         ctx.arc(tx(s.xs ? s.xs[i] : i), ty(s.values[i]), 2.6, 0, Math.PI * 2);
@@ -147,8 +147,8 @@ export function drawChart(canvas: HTMLCanvasElement, series: Series[], o: ChartO
   }
   ctx.setLineDash([]);
   if (o.marker !== undefined) {
-    ctx.strokeStyle = textColor;
-    ctx.globalAlpha = 0.6;
+    ctx.strokeStyle = tok('--ink');
+    ctx.globalAlpha = 0.5;
     ctx.beginPath();
     ctx.moveTo(tx(o.marker), padT);
     ctx.lineTo(tx(o.marker), padT + ph);
@@ -158,16 +158,37 @@ export function drawChart(canvas: HTMLCanvasElement, series: Series[], o: ChartO
   ctx.restore();
 
   if (o.legend) {
+    const named = series.filter((s) => s.label);
     let x = padL;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    for (const s of series) {
-      if (!s.label) continue;
-      ctx.fillStyle = s.color;
-      ctx.fillRect(x, 8, 10, 3);
+    // One series needs no key: its name is the chart's caption.
+    if (named.length === 1) {
       ctx.fillStyle = textColor;
-      ctx.fillText(s.label, x + 14, 10);
-      x += ctx.measureText(s.label).width + 30;
+      ctx.fillText(named[0].label!, x, 10);
+    } else {
+      for (const s of named) {
+        // Each swatch is the mark it explains, drawn small: same colour, width and dash.
+        const col = seriesColor(s);
+        if (s.width === 0 || (s.dots && !s.width)) {
+          ctx.fillStyle = col;
+          ctx.beginPath();
+          ctx.arc(x + 6, 10, 2.6, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          ctx.strokeStyle = col;
+          ctx.lineWidth = Math.max(1.5, s.width ?? 1.6);
+          ctx.setLineDash(s.dash ?? []);
+          ctx.beginPath();
+          ctx.moveTo(x, 10);
+          ctx.lineTo(x + 14, 10);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+        ctx.fillStyle = textColor;
+        ctx.fillText(s.label!, x + 19, 10);
+        x += ctx.measureText(s.label!).width + 34;
+      }
     }
   }
 }
@@ -202,9 +223,16 @@ function short(v: number): string {
   return v.toPrecision(2);
 }
 
+function seriesColor(s: Series): string {
+  const c = s.color ?? '--ink';
+  return c.startsWith('--') ? tok(c) : c;
+}
+
+/** A colour (hex, rgb(), or a token name like '--ink') at the given alpha. */
 export function withAlpha(color: string, a: number): string {
-  if (color.startsWith('#') && color.length === 7) {
-    const r = parseInt(color.slice(1, 3), 16), g = parseInt(color.slice(3, 5), 16), b = parseInt(color.slice(5, 7), 16);
+  if (color.startsWith('--')) return alpha(color, a);
+  if (color.startsWith('#') || color.startsWith('rgb')) {
+    const [r, g, b] = parseColor(color);
     return `rgba(${r},${g},${b},${a})`;
   }
   return color;

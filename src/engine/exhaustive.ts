@@ -183,12 +183,12 @@ export class FateRunner {
 export type Outcome = 'vanishes' | 'flies' | 'still' | 'oscillator' | 'gliders' | 'unsettled';
 
 export const OUTCOME_INFO: Record<Outcome, { label: string; colour: string }> = {
-  vanishes: { label: 'Vanishes', colour: '#5b6585' },
-  flies: { label: 'Flies away', colour: '#7df9ff' },
-  still: { label: 'Settles to still lifes', colour: '#38e8a8' },
-  oscillator: { label: 'Settles to oscillators', colour: '#c084fc' },
-  gliders: { label: 'Settles and fires gliders', colour: '#ffb347' },
-  unsettled: { label: 'Not settled yet', colour: '#ff4f6d' },
+  vanishes: { label: 'Vanishes', colour: '--muted' },
+  flies: { label: 'Flies away', colour: '--data-indigo' },
+  still: { label: 'Settles to still lifes', colour: '--data-pine' },
+  oscillator: { label: 'Settles to oscillators', colour: '--data-plum' },
+  gliders: { label: 'Settles and fires gliders', colour: '--data-ochre' },
+  unsettled: { label: 'Not settled yet', colour: '--data-shu' },
 };
 
 export function outcomeOf(r: FateResult): Outcome {

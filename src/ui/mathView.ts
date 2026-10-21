@@ -12,8 +12,25 @@ import { Sandpile, linearFit, logBins, sandpileGroupOrder, sandpileIdentity } fr
 import { burnsideCount } from '../engine/exhaustive';
 import { createBoxFigures } from './boxFigure';
 import { createPastFigure } from './pastFigure';
-import { type Series, drawChart } from './chart';
+import { type ChartOptions, type Series, drawChart as paintChart } from './chart';
 import { fitCanvas, fmt, h, select, slider } from './dom';
+import { sandpileLevels } from './physicsDemos';
+import { onTheme } from './theme';
+
+/** The last chart drawn on each canvas, so all of them can be redrawn when the colour mode changes. */
+const charts = new Map<HTMLCanvasElement, () => void>();
+function drawChart(canvas: HTMLCanvasElement, series: Series[], o: ChartOptions = {}) {
+  const draw = () => paintChart(canvas, series, o);
+  charts.set(canvas, draw);
+  draw();
+}
+
+/** Wolfram's classes in the data palette (series colours are token names, read when drawn). */
+// Same class colours as the rule atlas.
+const CLASS_COLOUR: Record<RuleClass, string> = { I: '--muted', II: '--data-indigo', III: '--data-shu', IV: '--data-pine' };
+
+/** A short "working on it" note for figures that compute after the page opens. */
+const working = (msg: string) => [h('span.stones-loading', { 'aria-hidden': 'true' }, h('i'), h('i'), h('i')), ` ${msg}`];
 
 const tex = (s: string, display = false) => katex.renderToString(s, { displayMode: display, throwOnError: false });
 
@@ -79,7 +96,7 @@ export function createMathView(root: HTMLElement) {
 
   // ---- Figure: accuracy against initial density for GKL and local majority ----
   const dcChart = h('canvas.chart.tall');
-  const dcNote = h('span.mono', {}, 'computing…');
+  const dcNote = h('span.readout', {}, ...working('Running random rings…'));
   const runDensityFigure = () => {
     const N = 149, per = 30;
     const ks: number[] = [];
@@ -102,8 +119,8 @@ export function createMathView(root: HTMLElement) {
       }
       const xs = ks.slice(0, acc[0].length).map((k) => k / N);
       drawChart(dcChart, [
-        { values: acc[0], xs, color: '#7df9ff', label: 'GKL', width: 2, dots: true },
-        { values: acc[1], xs, color: '#ff4fa3', label: 'local majority of 7', width: 2, dots: true },
+        { values: acc[0], xs, color: '--ink', label: 'GKL', width: 2, dots: true },
+        { values: acc[1], xs, color: '--data-shu', label: 'local majority of 7', width: 2, dots: true },
       ], { xLabel: 'initial density of 1s', yLabel: '% correct', xMin: 0, xMax: 1, yMin: 0, yMax: 100, legend: true, marker: 0.5 });
       if (i < ks.length) setTimeout(batch, 0);
       else dcNote.textContent = `${per} random rings of ${N} cells per point · GKL dips only near ½; the local majority rule fails almost everywhere except at extreme densities`;
@@ -113,7 +130,7 @@ export function createMathView(root: HTMLElement) {
 
   // ---- Figure: Langton's lambda vs activity for random rules ----
   const edgeChart = h('canvas.chart.tall');
-  const edgeNote = h('span.mono');
+  const edgeNote = h('span.readout', {}, ...working('Classifying random rules…'));
   const edgeBars = h('canvas.chart.small');
   const edgePts: { lambda: number; activity: number; cls: RuleClass; rule: string }[] = [];
   let edgeSeed = 1;
@@ -121,7 +138,7 @@ export function createMathView(root: HTMLElement) {
   const drawEdge = () => {
     const series: Series[] = (Object.keys(CLASS_INFO) as RuleClass[]).map((c) => {
       const pts = edgePts.filter((p) => p.cls === c);
-      return { values: pts.map((p) => p.activity * 100), xs: pts.map((p) => p.lambda), color: CLASS_INFO[c].colour, width: 0, dots: true, label: `${c} ${CLASS_INFO[c].name}` };
+      return { values: pts.map((p) => p.activity * 100), xs: pts.map((p) => p.lambda), color: CLASS_COLOUR[c], width: 0, dots: true, label: `${c} ${CLASS_INFO[c].name}` };
     });
     drawChart(edgeChart, series, { xLabel: "Langton's λ", yLabel: 'activity %', xMin: 0, xMax: 1, yMin: 0, legend: true, marker: 140 / 512 });
     // Share of each class by lambda band
@@ -135,7 +152,7 @@ export function createMathView(root: HTMLElement) {
     }
     const used = tot.map((t, i) => (t >= 3 ? i : -1)).filter((i) => i >= 0);
     drawChart(edgeBars, (Object.keys(CLASS_INFO) as RuleClass[]).map((c) => ({
-      values: used.map((i) => (by[c][i] / tot[i]) * 100), xs: used.map((i) => (i + 0.5) / bands), color: CLASS_INFO[c].colour, dots: true, width: 2, label: c,
+      values: used.map((i) => (by[c][i] / tot[i]) * 100), xs: used.map((i) => (i + 0.5) / bands), color: CLASS_COLOUR[c], dots: true, width: 2, label: c,
     })), { xLabel: 'λ (bands of 0.1)', yLabel: '% of rules', xMin: 0, xMax: 1, yMin: 0, yMax: 100, legend: true, marker: 140 / 512 });
     const n = edgePts.length;
     const share = (c: RuleClass) => ((edgePts.filter((p) => p.cls === c).length / Math.max(1, n)) * 100).toFixed(0);
@@ -161,28 +178,33 @@ export function createMathView(root: HTMLElement) {
 
   // ---- Figure: sandpile identity and avalanche statistics ----
   const idCanvas = h('canvas.demo-canvas.identity', { width: 128, height: 96 });
-  const idNote = h('span.mono', {}, 'computing…');
+  const idNote = h('span.readout', {}, ...working('Computing the identity…'));
   const avChart = h('canvas.chart');
-  const avNote = h('span.mono');
+  const avNote = h('span.readout', {}, ...working('Dropping 30,000 grains…'));
+  let identity: Uint8Array | null = null;
+  const paintIdentity = () => {
+    if (!identity) return;
+    const ctx = idCanvas.getContext('2d')!;
+    const img = ctx.createImageData(128, 96);
+    const pal = sandpileLevels();
+    for (let i = 0; i < identity.length; i++) {
+      const c = pal[identity[i]];
+      img.data.set([c[0], c[1], c[2], 255], i * 4);
+    }
+    ctx.putImageData(img, 0, 0);
+  };
   const orderRows = h('tbody');
   const runSandpileFigures = () => {
     const W = 128, H = 96;
     const t0 = performance.now();
-    const e = sandpileIdentity(W, H);
-    const ctx = idCanvas.getContext('2d')!;
-    const img = ctx.createImageData(W, H);
-    const pal = [[12, 14, 30], [40, 70, 160], [80, 190, 230], [250, 240, 200]];
-    for (let i = 0; i < W * H; i++) {
-      const c = pal[e[i]];
-      img.data.set([c[0], c[1], c[2], 255], i * 4);
-    }
-    ctx.putImageData(img, 0, 0);
+    identity = Uint8Array.from(sandpileIdentity(W, H));
+    paintIdentity();
     idNote.textContent = `${W}×${H} identity computed in ${Math.round(performance.now() - t0)} ms`;
     const rows: HTMLElement[] = [];
     for (const [w, hh] of [[1, 1], [2, 2], [3, 3], [4, 4], [5, 5], [6, 6], [8, 8], [10, 10]]) {
       const o = sandpileGroupOrder(w, hh);
       const str = o.toString();
-      rows.push(h('tr', {}, h('td', {}, `${w}×${hh}`), h('td.mono', {}, str.length > 24 ? `${str.slice(0, 6)}… (${str.length} digits)` : str.replace(/\B(?=(\d{3})+(?!\d))/g, ','))));
+      rows.push(h('tr', {}, h('td', {}, `${w}×${hh}`), h('td.readout', {}, str.length > 24 ? `${str.slice(0, 6)}… (${str.length} digits)` : str.replace(/\B(?=(\d{3})+(?!\d))/g, ','))));
     }
     orderRows.replaceChildren(...rows);
     setTimeout(() => {
@@ -200,8 +222,8 @@ export function createMathView(root: HTMLElement) {
       const keep = lx.map((_, i) => i).filter((i) => lx[i] > 0.4 && lx[i] < 2.8);
       const fit = linearFit(keep.map((i) => lx[i]), keep.map((i) => ly[i]));
       drawChart(avChart, [
-        { values: ly, xs: lx, color: '#7df9ff', dots: true, width: 0, label: 'measured P(s)' },
-        { values: [fit.intercept + fit.slope * lx[0], fit.intercept + fit.slope * lx[lx.length - 1]], xs: [lx[0], lx[lx.length - 1]], color: '#ffb020', width: 1.5, dash: [4, 3], label: `fit: slope ${fit.slope.toFixed(2)}` },
+        { values: ly, xs: lx, color: '--ink', dots: true, width: 0, label: 'measured P(s)' },
+        { values: [fit.intercept + fit.slope * lx[0], fit.intercept + fit.slope * lx[lx.length - 1]], xs: [lx[0], lx[lx.length - 1]], color: '--data-shu', width: 1.5, dash: [4, 3], label: `fit: slope ${fit.slope.toFixed(2)}` },
       ], { xLabel: 'log₁₀ avalanche size s (topplings)', yLabel: 'log₁₀ P(s)', legend: true });
       avNote.textContent = `${sizes.length.toLocaleString()} avalanches on a ${L}×${L} pile · τ ≈ ${(-fit.slope).toFixed(2)}`;
     }, 30);
@@ -260,13 +282,13 @@ export function createMathView(root: HTMLElement) {
       p = f;
     }
     const series: Series[] = [
-      { values: ps, xs: ps, color: '#5b6b8c', label: 'p′ = p', dash: [4, 4], width: 1 },
-      { values: fs, xs: ps, color: '#7df9ff', label: 'f(p)', width: 2 },
-      { values: cy, xs: cx, color: '#ffb020', label: 'cobweb', width: 1.2 },
+      { values: ps, xs: ps, color: '--muted', label: 'p′ = p', dash: [4, 4], width: 1 },
+      { values: fs, xs: ps, color: '--ink', label: 'f(p)', width: 2 },
+      { values: cy, xs: cx, color: '--data-ochre', label: 'cobweb', width: 1.2 },
     ];
     if (measured) {
-      series.push({ values: measured.one, xs: measured.p, color: '#38e8a8', label: 'soup, 1 step', width: 0, dots: true });
-      series.push({ values: measured.long, xs: measured.p, color: '#ff4fa3', label: 'soup, 300 steps', width: 0, dots: true });
+      series.push({ values: measured.one, xs: measured.p, color: '--data-pine', label: 'soup, 1 step', width: 0, dots: true });
+      series.push({ values: measured.long, xs: measured.p, color: '--data-shu', label: 'soup, 300 steps', width: 0, dots: true });
     }
     drawChart(mfCanvas, series, { xMin: 0, xMax: 1, yMin: 0, yMax: 1, legend: true, xLabel: 'density p', yLabel: 'next density' });
     // Fixed points.
@@ -333,8 +355,8 @@ export function createMathView(root: HTMLElement) {
     }
     const xs = dens.map((_, i) => i * 3);
     drawChart(entCanvas, [
-      { values: ent, xs, color: '#c084fc', label: 'block entropy H₂ₓ₂ / 4 (bits per cell)', width: 2 },
-      { values: dens, xs, color: '#38e8a8', label: 'density', width: 2 },
+      { values: ent, xs, color: '--ink', label: 'block entropy H₂ₓ₂ / 4 (bits per cell)', width: 2 },
+      { values: dens, xs, color: '--data-pine', label: 'density', width: 2 },
     ], { legend: true, xLabel: 'generation', yMin: 0 });
   };
 
@@ -342,7 +364,7 @@ export function createMathView(root: HTMLElement) {
   const dmgCanvas = h('canvas.chart');
   const runDamage = () => {
     const series: Series[] = [];
-    const colors = ['#ff4fa3', '#ffb020', '#7df9ff'];
+    const colors = ['--ink', '--data-shu', '--data-indigo'];
     const rules = ['B3/S23', 'B36/S23', 'B3678/S34678'];
     rules.forEach((r, ri) => {
       const avg = new Array(201).fill(0);
@@ -370,7 +392,7 @@ export function createMathView(root: HTMLElement) {
   // ---- Figure: growth ----
   const growthCanvas = h('canvas.chart');
   const runGrowth = () => {
-    const ids: [string, string][] = [['gosper', '#7df9ff'], ['switchengine', '#ffb020'], ['acorn', '#ff4fa3']];
+    const ids: [string, string][] = [['gosper', '--ink'], ['switchengine', '--data-ochre'], ['acorn', '--data-shu']];
     const series = ids.map(([id, color]) => {
       let c = patternCells(id);
       const v: number[] = [];
@@ -473,21 +495,21 @@ export function createMathView(root: HTMLElement) {
       let sxy = 0, sxx = 0;
       for (let i = 0; i < n; i++) { sxy += (ranks[i] - mx) * (freqs[i] - my); sxx += (ranks[i] - mx) ** 2; }
       const slope = sxy / sxx;
-      fit = { values: [my + slope * (ranks[0] - mx), my + slope * (ranks[n - 1] - mx)], xs: [ranks[0], ranks[n - 1]], color: '#ffb020', label: `fit: slope ${slope.toFixed(2)}`, dash: [4, 3], width: 1.5 };
+      fit = { values: [my + slope * (ranks[0] - mx), my + slope * (ranks[n - 1] - mx)], xs: [ranks[0], ranks[n - 1]], color: '--data-shu', label: `fit: slope ${slope.toFixed(2)}`, dash: [4, 3], width: 1.5 };
     }
-    drawChart(zipfCanvas, [{ values: freqs, xs: ranks, color: '#7df9ff', label: 'log₁₀ share', dots: true, width: 1 }, ...(fit ? [fit] : [])], { legend: true, xLabel: 'log₁₀ rank' });
+    drawChart(zipfCanvas, [{ values: freqs, xs: ranks, color: '--ink', label: 'log₁₀ share', dots: true, width: 1 }, ...(fit ? [fit] : [])], { legend: true, xLabel: 'log₁₀ rank' });
     // Histogram of settling times.
     const bins = 20;
     const maxL = Math.max(100, ...lifespans);
     const hist = new Array(bins).fill(0);
     for (const l of lifespans) hist[Math.min(bins - 1, Math.floor((l / maxL) * bins))]++;
-    drawChart(lifeCanvas, [{ values: hist, xs: hist.map((_, i) => ((i + 0.5) * maxL) / bins), color: '#c084fc', fill: true, label: 'soups', width: 2 }], { legend: true, xLabel: 'generations', yMin: 0 });
+    drawChart(lifeCanvas, [{ values: hist, xs: hist.map((_, i) => ((i + 0.5) * maxL) / bins), color: '--ink', fill: true, label: 'soups', width: 2 }], { legend: true, xLabel: 'generations', yMin: 0 });
   }
 
   const content = h(
     'div.math',
     {},
-    h('nav.toc', {}, h('h3', {}, 'Contents'), ...toc.map(([id, t]) => h('a', { href: `#math/${id}`, onclick: (e: Event) => { e.preventDefault(); document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' }); } }, t))),
+    h('nav.toc', { 'aria-label': 'Contents' }, h('details', { open: !window.matchMedia('(max-width: 900px)').matches }, h('summary', {}, 'Contents'), ...toc.map(([id, t]) => h('a', { href: `#math/${id}`, onclick: (e: Event) => { e.preventDefault(); document.getElementById(id)?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); } }, t)))),
     h(
       'article',
       {},
@@ -518,7 +540,7 @@ $$n_t = K * s_t, \\qquad K = \\begin{pmatrix} 1 & 1 & 1 \\\\ 1 & 0 & 1 \\\\ 1 & 
 <p>Pretend every cell is independently alive with probability $p$. Then $n \\sim \\mathrm{Binomial}(8, p)$ and the probability a cell is alive next step is</p>
 $$f(p) = \\sum_{n=0}^{8} \\binom{8}{n} p^n (1-p)^{8-n} \\Big( p\\,[n \\in S] + (1-p)\\,[n \\in B] \\Big).$$
 <p>For Life this is $f(p) = \\binom{8}{3}p^3q^5 + \\binom{8}{2}p^3q^6$ with $q = 1-p$. Iterating $p_{t+1} = f(p_t)$ predicts the density. The prediction is <b>exact for one step</b> from a random soup (cells really are independent then) but drifts afterwards, because Life builds correlations: real soups decay to "ash" with density of only about 3%, far below the mean-field fixed point. Press <em>Measure real soups</em> to see both effects.</p>`,
-        figure('Mean-field map with cobweb iteration. Green dots: density after one step of a real 160×160 soup (matches theory). Pink dots: after 300 steps (correlations take over).',
+        figure('Mean-field map with cobweb iteration. Green dots: density after one step of a real 160×160 soup (matches theory). Red dots: after 300 steps (correlations take over).',
           h('div.fig-controls', {}, mfRuleSel, p0Ctl.el, measureBtn), mfCanvas, mfInfo),
       ),
 
@@ -586,7 +608,7 @@ $$K^{2^k} = K(u^{2^k}, v^{2^k}),$$
 <p>Why it works: a level-$k$ node is split into nine overlapping level-$(k-1)$ squares, each advanced recursively, then recombined into four squares and advanced again. With memoisation the cost depends on the number of <em>distinct</em> squares in space-time, not on area or time, so a pattern with regular structure costs $O(\log t)$ to advance $t$ generations.</p>`),
 
       section('census', '14. A census of random soups', `
-<p>What does Life "usually" make? Fill a $16\times16$ square at random with density $\tfrac12$, run it until it stabilises, and identify everything left over (spaceships that fly away are counted with ↗). Repeat many times. This is what Adam Goucher's <em>apgsearch</em> does across thousands of volunteer computers for the public census <a href="https://catagolue.hatsya.com" target="_blank" rel="noopener">Catagolue</a>; the most common objects there are the block, blinker, beehive, glider and loaf.</p>
+<p>What does Life "usually" make? Fill a $16\times16$ square at random with density $\tfrac12$, run it until it stabilises, and identify everything left over (spaceships that fly away are counted as "flew off"). Repeat many times. This is what Adam Goucher's <em>apgsearch</em> does across thousands of volunteer computers for the public census <a href="https://catagolue.hatsya.com" target="_blank" rel="noopener">Catagolue</a>; the most common objects there are the block, blinker, beehive, glider and loaf.</p>
 <p>Two statistics are worth watching. The <b>rank–frequency</b> plot (log–log) tests for <b>Zipf-like</b> behaviour $f(r) \propto r^{-s}$, a straight line of slope $-s$. The <b>Shannon diversity</b> $H = -\sum_i p_i \log_2 p_i$ measures how evenly the ash is spread over object types; $2^H$ is the "effective number" of species.</p>`,
         figure('Census of random 16×16 soups, computed live (seeded, so each run is reproducible).', censusUI()),
       ),
@@ -597,7 +619,7 @@ $$c \\;\\longmapsto\\; c - \\Delta e_v, \\qquad \\Delta = 4I - A,$$
 where $A$ is the adjacency matrix of the grid and grains pushed off the edge are lost. $\\Delta$ is the (reduced) <b>graph Laplacian</b>, the same operator as the discrete heat equation.</p>
 <p><b>Abelian property.</b> If two sites are unstable, toppling one never stops the other from being unstable, and the vectors $\\Delta e_v$ commute. So every order of topplings reaches the same stable configuration $\\operatorname{stab}(c)$ with the same number of topplings at each site (Dhar, 1990). The apps page and the test suite check this on random drops.</p>
 <p><b>The sandpile group.</b> The <em>recurrent</em> stable configurations (those you keep returning to when adding grains at random) form a group under $a \\oplus b = \\operatorname{stab}(a+b)$, isomorphic to $\\mathbb{Z}^{mn} / \\Delta\\mathbb{Z}^{mn}$. Its order is $\\det \\Delta$, which by Kirchhoff's <b>matrix-tree theorem</b> also counts the spanning trees of the grid with its boundary wired to one sink vertex. The test suite enumerates all $4^{mn}$ configurations of small grids, applies Dhar's burning test, and confirms the count equals $\\det\\Delta$. The identity element $e = \\operatorname{stab}\\bigl(6 - \\operatorname{stab}(6)\\bigr)$ is an unexpectedly intricate fractal picture:</p>`,
-        figure('The identity of the sandpile group on a 128×96 grid (colours = 0, 1, 2, 3 grains). Adding it to any recurrent configuration and relaxing changes nothing.', idCanvas, h('div.fig-controls', {}, idNote)),
+        figure('The identity of the sandpile group on a 128×96 grid (dark to light: 0, 1, 2, 3 grains). Adding it to any recurrent configuration and relaxing changes nothing.', idCanvas, h('div.fig-controls', {}, idNote)),
         figure('Order of the sandpile group, $|G| = \\det \\Delta$ = number of spanning trees, computed exactly with BigInt Bareiss elimination.', h('table.goe', {}, h('thead', {}, h('tr', {}, h('th', {}, 'Grid'), h('th', {}, '|G| = det Δ'))), orderRows)),
         h('div.prose', { html: md(`<p><b>Self-organised criticality.</b> Drop grains at random. Each drop triggers an avalanche of $s$ topplings, and in the steady state
 $$P(s) \\sim s^{-\\tau}$$
@@ -658,6 +680,11 @@ The empty $3\\times3$ is by far the most common present: about 15% of all pasts 
     ),
   );
   root.append(content);
+
+  onTheme(() => {
+    charts.forEach((draw) => draw());
+    paintIdentity();
+  });
 
   let drawn = false;
   return {

@@ -31,7 +31,7 @@ function createWindow() {
   win.webContents.on('will-navigate', (e, url) => {
     if (!url.startsWith('app://')) { e.preventDefault(); shell.openExternal(url); }
   });
-  win.loadURL('app://life-tree/index.html');
+  win.loadURL('app://life-tree/index.html#sim'); // open straight on the board, like the installed web app
   return win;
 }
 

@@ -14,11 +14,11 @@ import { mulberry32 } from './census';
 
 export type RuleClass = 'I' | 'II' | 'III' | 'IV';
 
-export const CLASS_INFO: Record<RuleClass, { name: string; colour: string; blurb: string }> = {
-  I: { name: 'Dies out', colour: '#5b6a8f', blurb: 'Evolves to a uniform dead state' },
-  II: { name: 'Settles', colour: '#38e8a8', blurb: 'Freezes or falls into short cycles' },
-  III: { name: 'Chaotic', colour: '#ff4fa3', blurb: 'Busy, structureless churn that never settles' },
-  IV: { name: 'Complex', colour: '#ffb020', blurb: 'Long-lived localised structures, the edge of chaos' },
+export const CLASS_INFO: Record<RuleClass, { name: string; /** Design token name for this class, e.g. '--data-shu'. */ colour: string; blurb: string }> = {
+  I: { name: 'Dies out', colour: '--muted', blurb: 'Evolves to a uniform dead state' },
+  II: { name: 'Settles', colour: '--data-indigo', blurb: 'Freezes or falls into short cycles' },
+  III: { name: 'Chaotic', colour: '--data-shu', blurb: 'Busy, structureless churn that never settles' },
+  IV: { name: 'Complex', colour: '--data-pine', blurb: 'Long-lived localised structures, the edge of chaos' },
 };
 
 /**

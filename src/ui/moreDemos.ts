@@ -5,20 +5,15 @@
  */
 import { h, slider } from './dom';
 import { drawChart } from './chart';
-import { type Demo, PixelCanvas, type RGB } from './demos';
+import { type Demo, PixelCanvas, type RGB, at, catGround, css, lut, mix, sequential, themed } from './demos';
+import { rgb, tok } from './theme';
 import { Lenia, ORBIUM, ORBIUM_CELLS, stampPattern } from '../engine/models/lenia';
 import { Schelling } from '../engine/models/schelling';
 import { Hodgepodge } from '../engine/models/hodgepodge';
 import { NaSch } from '../engine/models/nasch';
 
-/** A perceptual-ish ramp for continuous fields (dark blue → teal → yellow → white). */
-function ramp(t: number): RGB {
-  const stops: RGB[] = [[6, 8, 24], [24, 40, 110], [20, 150, 170], [120, 220, 120], [250, 230, 90], [255, 255, 240]];
-  const x = Math.max(0, Math.min(0.9999, t)) * (stops.length - 1);
-  const i = Math.floor(x), f = x - i;
-  const a = stops[i], b = stops[i + 1];
-  return [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f];
-}
+/** The sequential map for continuous fields: slate (empty) up to clamshell (full). */
+const seqLut = themed(() => lut(sequential()));
 
 // ---------------------------------------------------------------- Lenia
 export function leniaDemo(): Demo {
@@ -28,7 +23,7 @@ export function leniaDemo(): Demo {
   const world = new Lenia(W, H, { ...ORBIUM });
   const mass: number[] = [];
   const chart = h('canvas.chart.small');
-  const label = h('span.mono');
+  const label = h('span.readout');
   const reset = () => {
     world.A.fill(0);
     // Same orientation means same velocity, so these two never collide.
@@ -48,9 +43,10 @@ export function leniaDemo(): Demo {
     world.step();
     mass.push(world.mass);
     if (mass.length > 400) mass.shift();
-    px.paint((i) => ramp(world.A[i]));
+    const table = seqLut();
+    px.paint((i) => at(table, world.A[i]));
     if (++frame % 10 === 0) {
-      drawChart(chart, [{ values: mass, color: '#7df9ff', label: 'total mass', width: 1.5 }], { yMin: 0, legend: true });
+      drawChart(chart, [{ values: mass, color: '--ink', label: 'total mass', width: 1.5 }], { yMin: 0, legend: true });
       label.textContent = `t = ${(world.generation / world.p.T).toFixed(1)} · μ ${world.p.mu.toFixed(3)} · σ ${world.p.sigma.toFixed(4)}`;
     }
   };
@@ -71,7 +67,12 @@ export function schellingDemo(): Demo {
   let threshold = 0.34;
   const seg: number[] = [], unhappy: number[] = [];
   const chart = h('canvas.chart.small');
-  const label = h('span.mono');
+  const label = h('span.readout');
+  // Two groups in indigo and ochre; an unhappy agent is drawn faded towards the ground.
+  const pal = themed(() => {
+    const ground = catGround(), a = rgb('--data-indigo'), b = rgb('--data-ochre');
+    return { ground, a, aSad: mix(a, ground, 0.5), b, bSad: mix(b, ground, 0.5) };
+  });
   const reset = () => {
     town = new Schelling(W, H);
     town.threshold = threshold;
@@ -88,15 +89,16 @@ export function schellingDemo(): Demo {
     seg.push(town.segregation() * 100);
     unhappy.push((town.unhappyCount() / (W * H)) * 100);
     if (seg.length > 300) { seg.shift(); unhappy.shift(); }
+    const p = pal();
     px.paint((i) => {
       const v = town.g[i];
-      if (!v) return [14, 16, 28];
+      if (!v) return p.ground;
       const sad = town.unhappy(i);
-      return v === 1 ? (sad ? [120, 150, 255] : [70, 110, 255]) : sad ? [255, 190, 120] : [255, 150, 50];
+      return v === 1 ? (sad ? p.aSad : p.a) : sad ? p.bSad : p.b;
     });
     drawChart(chart, [
-      { values: seg, color: '#c084fc', label: 'similar neighbours %' },
-      { values: unhappy, color: '#ff4f6d', label: 'unhappy %' },
+      { values: seg, color: '--ink', label: 'similar neighbours %' },
+      { values: unhappy, color: '--data-shu', label: 'unhappy %' },
     ], { yMin: 0, yMax: 100, legend: true });
     label.textContent = moved ? `${moved} moves this round` : 'Everyone is content: the town has settled';
   };
@@ -118,15 +120,12 @@ export function bzDemo(): Demo {
     m.randomize(Math.random);
   };
   reset();
-  const pal: RGB[] = [];
-  for (let v = 0; v <= 200; v++) {
-    const t = v / 200;
-    // Ferroin colours: red (reduced) to blue (oxidised).
-    pal.push([200 * (1 - t) + 30 * t, 40 + 60 * Math.sin(Math.PI * t), 60 * (1 - t) + 230 * t]);
-  }
+  // Ferroin colours: red (reduced) through the board to blue (oxidised).
+  const pal = themed(() => lut([rgb('--data-shu'), rgb('--board'), rgb('--data-indigo')], 201));
   const tick = () => {
     m.step();
-    px.paint((i) => pal[m.s[i]]);
+    const p = pal();
+    px.paint((i) => p[m.s[i]]);
   };
   const el = h('div', {}, px.canvas, h('div.fig-controls', {},
     slider('Reaction speed g', 5, 60, 1, g, (v) => { g = v; m.g = v; }).el,
@@ -145,13 +144,15 @@ export function ringRoadDemo(): Demo {
   const rows: Uint8Array[] = [];
   const speeds: number[] = [];
   const chart = h('canvas.chart.small');
-  const label = h('span.mono');
+  const label = h('span.readout');
   const reset = () => {
     road = new NaSch(L, cars, 5, pBrake);
     rows.length = 0;
     speeds.length = 0;
   };
-  const speedColour = (v: number): RGB => (v <= 0 ? [255, 60, 80] : v <= 2 ? [255, 170, 60] : [70, 230, 160]);
+  // Stopped cars vermilion, slow ochre, flowing pine.
+  const pal = themed(() => ({ road: catGround(), stop: rgb('--data-shu'), slow: rgb('--data-ochre'), go: rgb('--data-pine') }));
+  const speedColour = (v: number): RGB => { const p = pal(); return v <= 0 ? p.stop : v <= 2 ? p.slow : p.go; };
   let frame = 0;
   const tick = () => {
     if (frame++ % 3) return;
@@ -165,17 +166,18 @@ export function ringRoadDemo(): Demo {
     if (speeds.length > 300) speeds.shift();
     // Space–time diagram: one row per step, newest at the bottom.
     const off = 160 - rows.length;
+    const asphalt = pal().road;
     st.paint((i) => {
       const y = Math.floor(i / L) - off, x = i % L;
-      if (y < 0) return [8, 10, 22];
+      if (y < 0) return asphalt;
       const v = rows[y][x];
-      return v === 255 ? [8, 10, 22] : speedColour(v);
+      return v === 255 ? asphalt : speedColour(v);
     });
     // Ring
     const S = 360, cx = S / 2, cy = S / 2, R = 140;
     rctx.clearRect(0, 0, S, S);
     rctx.lineWidth = 26;
-    rctx.strokeStyle = '#1b2236';
+    rctx.strokeStyle = css(asphalt);
     rctx.beginPath();
     rctx.arc(cx, cy, R, 0, Math.PI * 2);
     rctx.stroke();
@@ -185,17 +187,17 @@ export function ringRoadDemo(): Demo {
       rctx.save();
       rctx.translate(cx + R * Math.cos(a), cy + R * Math.sin(a));
       rctx.rotate(a + Math.PI / 2);
-      rctx.fillStyle = `rgb(${c[0]},${c[1]},${c[2]})`;
+      rctx.fillStyle = css(c);
       rctx.fillRect(-6, -5, 12, 10);
       rctx.restore();
     }
-    rctx.fillStyle = '#c0c9e6';
-    rctx.font = '600 24px system-ui, sans-serif';
+    rctx.fillStyle = tok('--ink');
+    rctx.font = `650 24px ${tok('--ui')}`;
     rctx.textAlign = 'center';
     rctx.fillText(`${road.cars} cars`, cx, cy - 8);
-    rctx.font = '18px ui-monospace, monospace';
+    rctx.font = `500 18px ${tok('--ui')}`;
     rctx.fillText(`speed ${road.meanSpeed().toFixed(2)} / 5`, cx, cy + 20);
-    if (frame % 15 === 1) drawChart(chart, [{ values: speeds, color: '#38e8a8', label: 'mean speed', width: 1.5 }], { yMin: 0, yMax: 5, legend: true });
+    if (frame % 15 === 1) drawChart(chart, [{ values: speeds, color: '--ink', label: 'mean speed', width: 1.5 }], { yMin: 0, yMax: 5, legend: true });
     const stopped = [...road.vel].filter((v) => v === 0).length;
     label.textContent = `${stopped} cars stopped`;
   };

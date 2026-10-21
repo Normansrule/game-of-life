@@ -6,7 +6,8 @@
  */
 import { h, select, slider } from './dom';
 import { drawChart } from './chart';
-import { type Demo, PixelCanvas, type RGB } from './demos';
+import { type Demo, PixelCanvas, type RGB, at, catGround, diverging, lut, mix, sequential, themed } from './demos';
+import { alpha, rgb } from './theme';
 import { Sandpile, linearFit, logBins } from '../engine/models/sandpile';
 import { FHP } from '../engine/models/fhp';
 import { FISH, SHARK, Wator } from '../engine/models/wator';
@@ -14,6 +15,12 @@ import { Excitable } from '../engine/models/excitable';
 import { Reiter } from '../engine/models/reiter';
 
 // ---------------------------------------------------------------- Sandpile
+/** The four stable heights of a sandpile site on the sequential map. Shared with the maths page. */
+export function sandpileLevels(): RGB[] {
+  const table = lut(sequential());
+  return [0, 0.4, 0.68, 1].map((t) => at(table, t));
+}
+
 export function sandpileDemo(): Demo {
   const W = 128, H = 128;
   const px = new PixelCanvas(W, H);
@@ -23,8 +30,9 @@ export function sandpileDemo(): Demo {
   const sizes: number[] = [];
   const flash = new Float32Array(W * H);
   const chart = h('canvas.chart.small');
-  const label = h('span.mono');
-  const PAL: RGB[] = [[12, 14, 30], [40, 70, 160], [80, 190, 230], [250, 240, 200]];
+  const label = h('span.readout');
+  // 0 to 3 grains on the sequential map (slate is empty); a toppling site flashes vermilion.
+  const pal = themed(() => ({ levels: sandpileLevels(), flash: rgb('--data-shu') }));
   const reset = () => {
     pile = new Sandpile(W, H);
     if (mode === 'random') {
@@ -51,10 +59,11 @@ export function sandpileDemo(): Demo {
       }
     }
     for (let i = 0; i < flash.length; i++) flash[i] = pile.stamp[i] > ep0 ? 0.4 : flash[i] * 0.75;
+    const p = pal();
     px.paint((i) => {
-      const c = PAL[Math.min(3, pile.h[i])];
+      const c = p.levels[Math.min(3, pile.h[i])];
       const f = flash[i];
-      return [c[0] + (255 - c[0]) * f * 0.8, c[1] + (90 - c[1]) * f * 0.8, c[2] + (60 - c[2]) * f * 0.8];
+      return f > 0.01 ? mix(c, p.flash, f) : c;
     });
     if (++frame % 20 === 0) {
       if (mode === 'random' && sizes.length > 200) {
@@ -64,8 +73,8 @@ export function sandpileDemo(): Demo {
         const keep = lx.map((_, i) => i).filter((i) => lx[i] > 0.4 && lx[i] < Math.log10(W * W) - 0.6);
         const fit = linearFit(keep.map((i) => lx[i]), keep.map((i) => ly[i]));
         drawChart(chart, [
-          { values: ly, xs: lx, color: '#7df9ff', dots: true, width: 0, label: 'avalanches' },
-          { values: [fit.intercept + fit.slope * lx[0], fit.intercept + fit.slope * lx[lx.length - 1]], xs: [lx[0], lx[lx.length - 1]], color: '#ffb020', width: 1.5, dash: [4, 3], label: `slope ${fit.slope.toFixed(2)}` },
+          { values: ly, xs: lx, color: '--ink', dots: true, width: 0, label: 'avalanches' },
+          { values: [fit.intercept + fit.slope * lx[0], fit.intercept + fit.slope * lx[lx.length - 1]], xs: [lx[0], lx[lx.length - 1]], color: '--data-shu', width: 1.5, dash: [4, 3], label: `slope ${fit.slope.toFixed(2)}` },
         ], { xLabel: 'log₁₀ size', yLabel: 'log₁₀ P', legend: true });
         label.textContent = `${sizes.length.toLocaleString()} avalanches · biggest ${Math.max(...sizes.slice(-5000)).toLocaleString()} topplings`;
       } else label.textContent = `${dropped.toLocaleString()} grains dropped at the centre`;
@@ -102,7 +111,23 @@ export function fluidDemo(): Demo {
   let force = 0.002;
   const ux = new Float32Array(BW * BH), uy = new Float32Array(BW * BH), rho = new Float32Array(BW * BH);
   const ax = new Float32Array(BW * BH), ay = new Float32Array(BW * BH);
-  const label = h('span.mono');
+  const label = h('span.readout');
+  // Speed on the sequential map (slate is still); vorticity diverging pine (clockwise)
+  // through the board to vermilion (anticlockwise). The obstacle is a white stone.
+  const pal = themed(() => ({ seq: lut(sequential()), div: lut(diverging()), solid: rgb('--shell'), arrowsLight: alpha('--shell', 0.7), arrowsDark: alpha('--slate', 0.6) }));
+  let solidFor = '';
+
+  const paintSolid = () => {
+    const c = pal().solid;
+    solidFor = String(c);
+    const sctx = solidCanvas.getContext('2d')!;
+    const simg = sctx.createImageData(LW, LH);
+    for (let i = 0; i < LW * LH; i++) {
+      const s = gas.solid[i];
+      simg.data[i * 4] = c[0]; simg.data[i * 4 + 1] = c[1]; simg.data[i * 4 + 2] = c[2]; simg.data[i * 4 + 3] = s ? 255 : 0;
+    }
+    sctx.putImageData(simg, 0, 0);
+  };
 
   const build = () => {
     gas = new FHP(LW, LH);
@@ -128,13 +153,7 @@ export function fluidDemo(): Demo {
     gas.fill(0.3, 0.45); // start near the steady flow speed
     ax.fill(0);
     ay.fill(0);
-    const sctx = solidCanvas.getContext('2d')!;
-    const simg = sctx.createImageData(LW, LH);
-    for (let i = 0; i < LW * LH; i++) {
-      const s = gas.solid[i];
-      simg.data[i * 4] = 140; simg.data[i * 4 + 1] = 150; simg.data[i * 4 + 2] = 170; simg.data[i * 4 + 3] = s ? 255 : 0;
-    }
-    sctx.putImageData(simg, 0, 0);
+    paintSolid();
   };
   build();
 
@@ -152,29 +171,31 @@ export function fluidDemo(): Demo {
     let mean = 0;
     for (let k = 0; k < ax.length; k++) mean += ax[k];
     mean /= ax.length;
+    const p = pal();
+    if (solidFor !== String(p.solid)) paintSolid();
     const d = fimg.data;
     for (let by = 0; by < BH; by++)
       for (let bx = 0; bx < BW; bx++) {
         const k = by * BW + bx;
-        let r = 0, g = 0, b = 0;
+        let c: RGB;
         if (colour === 'speed') {
           const sp = Math.min(1, Math.hypot(ax[k], ay[k]) / (2.2 * Math.max(0.02, mean)));
-          r = 20 + 235 * sp * sp; g = 30 + 200 * sp; b = 90 + 120 * (1 - sp);
+          c = at(p.seq, sp);
         } else {
           const kx1 = by * BW + Math.min(BW - 1, bx + 1), kx0 = by * BW + Math.max(0, bx - 1);
           const ky1 = Math.min(BH - 1, by + 1) * BW + bx, ky0 = Math.max(0, by - 1) * BW + bx;
           const w = (ay[kx1] - ay[kx0]) / 2 - (ax[ky1] - ax[ky0]) / (2 * SY);
           const t = Math.max(-1, Math.min(1, w / (0.5 * Math.max(0.02, mean))));
-          r = t > 0 ? 30 + 225 * t : 30; g = 30 + 40 * (1 - Math.abs(t)); b = t < 0 ? 30 - 225 * t : 30;
+          c = at(p.div, (t + 1) / 2);
         }
-        d[k * 4] = r; d[k * 4 + 1] = g; d[k * 4 + 2] = b; d[k * 4 + 3] = 255;
+        d[k * 4] = c[0]; d[k * 4 + 1] = c[1]; d[k * 4 + 2] = c[2]; d[k * 4 + 3] = 255;
       }
     fctx.putImageData(fimg, 0, 0);
     ctx.imageSmoothingEnabled = true;
     ctx.drawImage(field, 0, 0, CW, CH);
     ctx.drawImage(solidCanvas, 0, 0, CW, CH);
     // Velocity arrows
-    ctx.strokeStyle = 'rgba(255,255,255,0.75)';
+    ctx.strokeStyle = colour === 'speed' ? p.arrowsLight : p.arrowsDark;
     ctx.lineWidth = 1;
     ctx.beginPath();
     const sx = CW / BW, sy = CH / BH;
@@ -215,7 +236,8 @@ export function predatorPreyDemo(): Demo {
   const fH: number[] = [], sH: number[] = [];
   const chart = h('canvas.chart.small');
   const phase = h('canvas.chart.small');
-  const label = h('span.mono');
+  const label = h('span.readout');
+  const pal = themed(() => ({ sea: catGround(), fish: rgb('--data-pine'), shark: rgb('--data-shu') }));
   const reset = () => {
     sea = new Wator(W, H, params);
     sea.seed(0.3, 0.03);
@@ -236,18 +258,19 @@ export function predatorPreyDemo(): Demo {
     fH.push(sea.fish / T);
     sH.push(sea.sharks / T);
     if (fH.length > 600) { fH.shift(); sH.shift(); }
+    const p = pal();
     px.paint((i) => {
       const k = sea.kind[i];
-      if (k === FISH) return [40, 200, 150];
-      if (k === SHARK) return [255, 120, 40];
-      return [8, 20, 48];
+      if (k === FISH) return p.fish;
+      if (k === SHARK) return p.shark;
+      return p.sea;
     });
     if (steps % 6 === 0) {
       drawChart(chart, [
-        { values: fH, color: '#38e8a8', label: 'fish' },
-        { values: sH, color: '#ff8a3d', label: 'sharks' },
+        { values: fH, color: '--data-pine', label: 'fish' },
+        { values: sH, color: '--data-shu', label: 'sharks' },
       ], { yMin: 0, legend: true, xLabel: 'time' });
-      drawChart(phase, [{ values: sH, xs: fH, color: '#c084fc', width: 1.2, label: 'trajectory' }], { xLabel: 'fish', yLabel: 'sharks', legend: false, yMin: 0, xMin: 0 });
+      drawChart(phase, [{ values: sH, xs: fH, color: '--ink', width: 1.2, label: 'trajectory' }], { xLabel: 'fish', yLabel: 'sharks', legend: false, yMin: 0, xMin: 0 });
       label.textContent = `fish ${sea.fish.toLocaleString()} · sharks ${sea.sharks.toLocaleString()}`;
     }
   };
@@ -270,16 +293,15 @@ export function heartDemo(): Demo {
   let t = 0;
   const ecg: number[] = [];
   const chart = h('canvas.chart.small');
-  const status = h('span.mono');
-  const pal: RGB[] = [];
-  for (let s = 0; s < 9; s++) {
-    if (s === 0) pal.push([40, 10, 22]);
-    else if (s === 1) pal.push([255, 245, 200]);
-    else {
-      const f = (s - 2) / 6;
-      pal.push([230 - 170 * f, 70 - 50 * f, 60 - 30 * f]);
-    }
-  }
+  const status = h('span.readout');
+  // Resting tissue is slate, a firing cell clamshell white, and refractory cells
+  // vermilion fading back to slate as they recover.
+  const pal = themed(() => {
+    const slate = rgb('--slate'), shu = rgb('--data-shu');
+    const c: RGB[] = [slate, rgb('--shell')];
+    for (let s = 2; s < 9; s++) c.push(mix(shu, slate, ((s - 2) / 6) * 0.8));
+    return c;
+  });
   const normal = () => {
     tissue = new Excitable(W, H, 9, 2, 2);
     pacemaker = true;
@@ -314,8 +336,9 @@ export function heartDemo(): Demo {
     tissue.step();
     ecg.push(tissue.excited / (W * H));
     if (ecg.length > 400) ecg.shift();
-    px.paint((i) => pal[tissue.s[i]]);
-    if (t % 4 === 0) drawChart(chart, [{ values: ecg, color: '#ff4f6d', label: 'cells firing (a crude ECG)', width: 1.5 }], { yMin: 0, legend: true });
+    const p = pal();
+    px.paint((i) => p[tissue.s[i]]);
+    if (t % 4 === 0) drawChart(chart, [{ values: ecg, color: '--data-shu', label: 'cells firing (a crude ECG)', width: 1.5 }], { yMin: 0, legend: true });
   };
   const el = h('div', {}, px.canvas, chart, h('div.fig-controls', {},
     h('button', { onclick: normal }, 'Normal rhythm'),
@@ -358,29 +381,28 @@ export function snowflakeDemo(): Demo {
       if (Math.abs(rq) > N || Math.abs(rr) > N || Math.abs(rq + rr) > N) continue;
       map[Y * CW + X] = flake.idx(rq, rr);
     }
-  const label = h('span.mono');
+  const label = h('span.readout');
   const betaCtl = slider('Vapour β', 0.3, 0.95, 0.01, beta, (v) => { beta = v; restart(); }, (v) => v.toFixed(2));
   const gammaCtl = slider('Addition γ', 0, 0.005, 0.0001, gamma, (v) => { gamma = v; restart(); }, (v) => v.toFixed(4));
   const restart = () => {
     flake = new Reiter(N, 1, beta, gamma);
   };
+  // Vapour is the dark end of the sequential map, ice the light end.
+  const seq = themed(() => lut(sequential()));
   const tick = () => {
     if (!flake.done) for (let k = 0; k < 8 && !flake.done; k++) flake.step();
     const d = img.data;
     const s = flake.s;
+    const table = seq();
+    const outside = table[0];
     for (let p = 0; p < map.length; p++) {
       const i = map[p];
-      let r = 4, g = 7, b = 18;
+      let c = outside;
       if (i >= 0) {
         const v = s[i];
-        if (v >= 1) {
-          const t = Math.min(1, (v - 1) / 1.2);
-          r = 150 + 105 * t; g = 205 + 50 * t; b = 255;
-        } else {
-          r = 14 + 40 * v; g = 22 + 50 * v; b = 48 + 80 * v;
-        }
+        c = v >= 1 ? at(table, 0.62 + 0.38 * Math.min(1, (v - 1) / 1.2)) : at(table, 0.04 + 0.34 * v);
       }
-      d[p * 4] = r; d[p * 4 + 1] = g; d[p * 4 + 2] = b; d[p * 4 + 3] = 255;
+      d[p * 4] = c[0]; d[p * 4 + 1] = c[1]; d[p * 4 + 2] = c[2]; d[p * 4 + 3] = 255;
     }
     ctx.putImageData(img, 0, 0);
     label.textContent = flake.done ? `finished after ${flake.steps.toLocaleString()} steps` : `growing… step ${flake.steps.toLocaleString()}`;

@@ -2,36 +2,45 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Life Tree: Game of Life explorer</title>
-    <meta name="description" content="Conway's Game of Life with GPU rendering, lineage trees, basins of attraction, the mathematics behind it and real-world applications." />
-    <meta name="theme-color" content="#060913" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Life Tree: Conway's Game of Life on a Go board</title>
+    <meta name="description" content="Conway's Game of Life, played on a Go board. Place stones, run them, trace every stone back to its parents, and explore the mathematics and real-world uses behind it." />
+    <meta name="theme-color" content="#EBD3A1" />
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 3 3'%3E%3Crect width='3' height='3' fill='%23070b16'/%3E%3Cpath fill='%237df9ff' d='M1 0h1v1H1zM2 1h1v1H2zM0 2h3v1H0z'/%3E%3C/svg%3E" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' rx='4' fill='%23D9A957'/%3E%3Cg fill='%231E1D1C'%3E%3Ccircle cx='15' cy='5.5' r='4.2'/%3E%3Ccircle cx='24.5' cy='15' r='4.2'/%3E%3Ccircle cx='5.5' cy='24.5' r='4.2'/%3E%3Ccircle cx='15' cy='24.5' r='4.2'/%3E%3Ccircle cx='24.5' cy='24.5' r='4.2'/%3E%3C/g%3E%3C/svg%3E" />
+    <script>
+      // Apply a saved colour mode before the first paint, so the page never flashes the wrong one.
+      try { var m = localStorage.getItem('life-tree:mode'); if (m === 'light' || m === 'dark') document.documentElement.dataset.theme = m; } catch (e) {}
+    </script>
   </head>
   <body>
+    <a class="skip" href="#app">Skip to content</a>
     <header class="topbar">
-      <a class="brand" href="#sim" aria-label="Life Tree home">
-        <svg viewBox="0 0 3 3" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M1 0h1v1H1zM2 1h1v1H2zM0 2h3v1H0z" /></svg>
-        <span>Life<b>Tree</b></span>
+      <a class="brand" href="#home" aria-label="Life Tree home">
+        <svg viewBox="0 0 30 30" width="24" height="24" aria-hidden="true"><g fill="currentColor"><circle cx="15" cy="5.5" r="4.2" /><circle cx="24.5" cy="15" r="4.2" /><circle cx="5.5" cy="24.5" r="4.2" /><circle cx="15" cy="24.5" r="4.2" /><circle cx="24.5" cy="24.5" r="4.2" /></g></svg>
+        <span>Life Tree</span>
       </a>
-      <nav class="tabs" role="tablist">
-        <a href="#sim" data-route="sim">Simulator</a>
-        <a href="#lineage" data-route="lineage">Lineage tree</a>
-        <a href="#space" data-route="space">3D spacetime</a>
-        <a href="#deep" data-route="deep">Deep time</a>
-        <a href="#basins" data-route="basins">State-space trees</a>
+      <nav class="tabs" aria-label="Views">
+        <a href="#sim" data-route="sim">Board</a>
+        <a href="#lineage" data-route="lineage">Lineage</a>
         <a href="#ancestors" data-route="ancestors">Ancestors</a>
+        <a href="#space" data-route="space">Spacetime</a>
+        <a href="#deep" data-route="deep">Deep time</a>
+        <a href="#basins" data-route="basins">State space</a>
         <a href="#atlas" data-route="atlas">Rule atlas</a>
         <a href="#evolve" data-route="evolve">Evolution</a>
         <a href="#puzzles" data-route="puzzles">Puzzles</a>
         <a href="#math" data-route="math">Math</a>
         <a href="#apps" data-route="apps">Applications</a>
+        <span class="tab-dot" aria-hidden="true"></span>
       </nav>
-      <button class="get-app" id="get-app" type="button" title="Install Life Tree or download the desktop app">⬇ Get the app</button>
+      <div class="topbar-end">
+        <button class="mode-btn" id="mode-btn" type="button"></button>
+        <button class="get-app" id="get-app" type="button">Get the app</button>
+      </div>
     </header>
-    <main id="app"></main>
+    <main id="app" tabindex="-1"></main>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

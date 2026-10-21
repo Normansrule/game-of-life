@@ -2,7 +2,24 @@
  * 3D spacetime renderer: every live cell (x, y) at generation t becomes a
  * cube at (x, t, y), drawn with WebGL2 instancing so hundreds of thousands
  * of cubes render in one draw call. Time runs upward.
+ *
+ * Drawn as stones on the board: matte slate voxels with plain diffuse
+ * shading, older layers fading toward the board, and the newest layer in
+ * clamshell white. No glow. Colours come from the design tokens through
+ * setColors(), which the view calls again whenever light/dark mode changes.
  */
+
+type RGB = [number, number, number];
+
+export interface SpacetimeColors {
+  /** Clear colour and the colour distant cubes fade toward. */
+  bg: RGB;
+  board: RGB;
+  slate: RGB;
+  shell: RGB;
+  /** Categorical colours for "colour by object" (up to 6). */
+  cats: RGB[];
+}
 
 type Mat4 = Float32Array;
 
@@ -82,22 +99,28 @@ in float vDepth;
 in float vFront;
 uniform float uFogFar;
 uniform vec3 uBg;
+uniform vec3 uBoard;
+uniform vec3 uSlate;
+uniform vec3 uShell;
+uniform vec3 uCat[6];
 uniform int uColorMode;
 out vec4 o;
-vec3 hsv(float h, float s, float v) {
-  vec3 k = clamp(abs(mod(h * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0);
-  return v * mix(vec3(1.0), k, s);
-}
 void main() {
   vec3 L = normalize(vec3(0.5, 0.9, 0.35));
   float diff = max(dot(normalize(vNormal), L), 0.0);
-  vec3 base = uColorMode == 0
-    ? hsv(0.53 + vT * 0.42, 0.75, 1.0)        // time: cyan -> violet -> pink
-    : hsv(fract(vHue), 0.7, 1.0);              // per-object colour
-  vec3 c = base * (0.35 + 0.75 * diff);
-  c += vec3(1.0) * vFront * 0.55;               // the newest layers glow
+  vec3 base;
+  if (uColorMode == 0) {
+    // By time: old layers fade toward the board like dry ink, recent ones are solid slate.
+    base = mix(mix(uSlate, uBoard, 0.5), uSlate, vT);
+  } else {
+    int i = int(floor(fract(vHue) * 6.0));
+    base = uCat[i];
+  }
+  // The current generation is a layer of white stones.
+  base = mix(base, uShell, smoothstep(0.8, 1.0, vFront));
+  vec3 c = base * (0.62 + 0.45 * diff);
   float fog = clamp(vDepth / uFogFar, 0.0, 1.0);
-  o = vec4(mix(c, uBg, fog * fog * 0.85), 1.0);
+  o = vec4(mix(c, uBg, fog * fog * 0.6), 1.0);
 }`;
 
 function cube(): Float32Array {
@@ -123,7 +146,7 @@ export class SpacetimeRenderer {
   private count = 0;
   private u: Record<string, WebGLUniformLocation | null> = {};
 
-  constructor(private canvas: HTMLCanvasElement) {
+  constructor(private canvas: HTMLCanvasElement, private colors: SpacetimeColors) {
     const gl = canvas.getContext('webgl2', { antialias: true });
     if (!gl) throw new Error('WebGL2 is not available in this browser');
     this.gl = gl;
@@ -140,7 +163,7 @@ export class SpacetimeRenderer {
     gl.linkProgram(p);
     if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p) ?? 'link');
     this.prog = p;
-    for (const n of ['uViewProj', 'uReveal', 'uTMax', 'uLayerGap', 'uFogFar', 'uBg', 'uColorMode']) this.u[n] = gl.getUniformLocation(p, n);
+    for (const n of ['uViewProj', 'uReveal', 'uTMax', 'uLayerGap', 'uFogFar', 'uBg', 'uBoard', 'uSlate', 'uShell', 'uCat', 'uColorMode']) this.u[n] = gl.getUniformLocation(p, n);
     this.vao = gl.createVertexArray()!;
     gl.bindVertexArray(this.vao);
     const vb = gl.createBuffer();
@@ -158,6 +181,11 @@ export class SpacetimeRenderer {
     gl.bindVertexArray(null);
   }
 
+  /** Set the palette (0..255 RGB). Call again when the colour mode changes. */
+  setColors(c: SpacetimeColors): void {
+    this.colors = c;
+  }
+
   /** instances: [x, t, y, hue] per live cell. */
   setInstances(data: Float32Array): void {
     const gl = this.gl;
@@ -169,7 +197,10 @@ export class SpacetimeRenderer {
   draw(viewProj: Mat4, o: { reveal: number; tMax: number; layerGap: number; fogFar: number; colorMode: number }): void {
     const gl = this.gl;
     gl.viewport(0, 0, this.canvas.width, this.canvas.height);
-    gl.clearColor(0.016, 0.024, 0.05, 1);
+    const c = this.colors;
+    const f = (v: RGB): [number, number, number] => [v[0] / 255, v[1] / 255, v[2] / 255];
+    const bg = f(c.bg);
+    gl.clearColor(bg[0], bg[1], bg[2], 1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.enable(gl.DEPTH_TEST);
     gl.useProgram(this.prog);
@@ -178,7 +209,13 @@ export class SpacetimeRenderer {
     gl.uniform1f(this.u.uTMax, o.tMax);
     gl.uniform1f(this.u.uLayerGap, o.layerGap);
     gl.uniform1f(this.u.uFogFar, o.fogFar);
-    gl.uniform3f(this.u.uBg, 0.016, 0.024, 0.05);
+    gl.uniform3f(this.u.uBg, ...bg);
+    gl.uniform3f(this.u.uBoard, ...f(c.board));
+    gl.uniform3f(this.u.uSlate, ...f(c.slate));
+    gl.uniform3f(this.u.uShell, ...f(c.shell));
+    const cats = new Float32Array(18);
+    for (let i = 0; i < 6; i++) cats.set(f(c.cats.length ? c.cats[i % c.cats.length] : c.slate), i * 3);
+    gl.uniform3fv(this.u.uCat, cats);
     gl.uniform1i(this.u.uColorMode, o.colorMode);
     gl.bindVertexArray(this.vao);
     gl.drawArraysInstanced(gl.TRIANGLES, 0, 36, this.count);

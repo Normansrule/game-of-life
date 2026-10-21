@@ -6,6 +6,8 @@
 import { preimageCounts3x3 } from '../engine/predecessors';
 import { drawChart } from './chart';
 import { h } from './dom';
+import { onTheme, tok } from './theme';
+import { CellPainter } from './thumb';
 
 const TOTAL = 1 << 25;
 const CHUNK = 1 << 20;
@@ -17,18 +19,21 @@ function drawWindow(canvas: HTMLCanvasElement, m: number) {
   const ctx = canvas.getContext('2d')!;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   const c = S / 3;
-  for (let i = 0; i < 9; i++) {
-    ctx.fillStyle = (m >> i) & 1 ? '#7df9ff' : 'rgba(255,255,255,0.06)';
-    ctx.fillRect((i % 3) * c + 1, Math.floor(i / 3) * c + 1, c - 2, c - 2);
-  }
+  ctx.fillStyle = tok('--board');
+  ctx.fillRect(0, 0, S, S);
+  const p = new CellPainter(c);
+  for (let i = 0; i < 9; i++) if ((m >> i) & 1) p.add((i % 3) * c, Math.floor(i / 3) * c);
+  p.fill(ctx, '--slate');
 }
 
 export function createPastFigure() {
   const chart = h('canvas.chart.tall');
-  const status = h('span.mono', {}, 'Waiting to start…');
+  const status = h('span.readout', {}, 'Waiting to start…');
   const extremes = h('div.past-extremes');
   const stats = h('div.past-stats');
   let started = false;
+  let result: Float64Array | null = null;
+  onTheme(() => result && draw(result));
 
   function start() {
     started = true;
@@ -46,13 +51,14 @@ export function createPastFigure() {
   }
 
   function draw(counts: Float64Array) {
+    result = counts;
     const order = [...counts.keys()].sort((a, b) => counts[b] - counts[a]);
-    drawChart(chart, [{ values: order.map((i) => counts[i]), color: '#c084fc', width: 2, fill: true, label: 'number of 5×5 pasts (log scale)' }],
+    drawChart(chart, [{ values: order.map((i) => counts[i]), color: '--ink', width: 2, fill: true, label: 'number of 5×5 pasts (log scale)' }],
       { logY: true, legend: true, xLabel: 'the 512 possible 3×3 presents, most pasts first' });
     const card = (m: number) => {
       const c = h('canvas.past-win');
       requestAnimationFrame(() => drawWindow(c, m));
-      return h('div.past-card', {}, c, h('b.mono', {}, counts[m].toLocaleString()), h('span.small.dim', {}, `${((counts[m] / TOTAL) * 100).toFixed(m === 0 ? 1 : 3)}%`));
+      return h('div.past-card', {}, c, h('b.readout', {}, counts[m].toLocaleString()), h('span.small.dim', {}, `${((counts[m] / TOTAL) * 100).toFixed(m === 0 ? 1 : 3)}%`));
     };
     extremes.replaceChildren(
       h('div', {}, h('h4', {}, 'Most pasts'), h('div.past-row', {}, ...order.slice(0, 4).map(card))),

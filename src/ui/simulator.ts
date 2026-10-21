@@ -1,13 +1,15 @@
 import { type Cell, Life, bounds, normalize } from '../engine/life';
 import { RULE_PRESETS, parseRule, ruleToString } from '../engine/rules';
-import { PATTERNS, type PatternDef, patternCells, transform } from '../engine/patterns';
+import { PATTERNS, type PatternDef, getPattern, patternCells, transform } from '../engine/patterns';
 import { parsePlaintext, parseRLE, toRLE } from '../engine/rle';
-import { PALETTES, css, getPalette } from '../render/palettes';
+import { PALETTES, getPalette } from '../render/palettes';
 import { type GridRenderer, type View, createRenderer } from '../render/renderer';
 import { drawChart } from './chart';
 import { fitCanvas, fmt, h, select, slider, toast, toggle } from './dom';
+import { type IconName, icon, setIcon } from './icons';
 import { emit, on } from './bus';
 import { drawThumb } from './thumb';
+import { alpha, boardTheme, onTheme, reducedMotion, tok } from './theme';
 
 type Tool = 'draw' | 'erase' | 'pan';
 
@@ -22,8 +24,9 @@ const HISTORY = 600;
 
 export function createSimulator(root: HTMLElement) {
   let life = new Life(256, 256);
-  let palette = getPalette('aurora');
-  const opts = { grid: true, trails: true, glow: true, wrap: true };
+  let palette = getPalette('turns');
+  const opts = { grid: true, trails: true, wrap: true, sinceStep: 1 };
+  let lastStepAt = 0;
   const view: View = { cx: 128, cy: 128, zoom: 4 };
   let running = true;
   let speed = 30;
@@ -32,6 +35,13 @@ export function createSimulator(root: HTMLElement) {
   let seedName = 'Your pattern';
   let active = false;
   let snapshot: { cells: Uint8Array; gen: number } | null = null;
+  type Snap = { cells: Uint8Array; gen: number };
+  // The last few generations, so you can step back in time, and the edits you can undo.
+  // Both are cleared whenever the board is resized, since old snapshots no longer fit.
+  let past: Snap[] = [];
+  let undoStack: Snap[] = [];
+  let redoStack: Snap[] = [];
+  const pastLimit = () => Math.min(240, Math.max(16, Math.floor(24e6 / (life.w * life.h))));
   const pop: number[] = [];
   const births: number[] = [];
   const deaths: number[] = [];
@@ -42,33 +52,48 @@ export function createSimulator(root: HTMLElement) {
   // ---------- DOM ----------
   const glCanvas = h('canvas.sim-gl', { 'aria-label': 'Game of Life grid' });
   const overlay = h('canvas.sim-overlay');
-  const playBtn = h('button.icon.primary', { title: 'Play / pause (Space)', onclick: () => setRunning(!running) }, '❚❚');
+  const ib = (title: string, name: IconName, onclick: () => void) => h('button.icon', { title, 'aria-label': title, onclick }, icon(name));
+  const playBtn = h('button.icon.primary', { title: 'Play / pause (Space)', 'aria-label': 'Pause', onclick: () => setRunning(!running) }, icon('pause'));
   const toolBtns: Record<Tool, HTMLButtonElement> = {
-    draw: h('button.icon', { title: 'Draw (D)', onclick: () => setTool('draw') }, '✎'),
-    erase: h('button.icon', { title: 'Erase (E)', onclick: () => setTool('erase') }, '⌫'),
-    pan: h('button.icon', { title: 'Pan (H). You can also drag with the right mouse button.', onclick: () => setTool('pan') }, '✥'),
+    draw: ib('Draw (D)', 'draw', () => setTool('draw')),
+    erase: ib('Erase (E)', 'erase', () => setTool('erase')),
+    pan: ib('Pan (H). You can also drag with the right mouse button.', 'pan', () => setTool('pan')),
   };
+  const backBtn = ib('Step back one generation (B or ←)', 'back', () => stepBack());
+  const undoBtn = ib('Undo the last edit (Ctrl+Z)', 'undo', () => undo());
+  const redoBtn = ib('Redo (Ctrl+Shift+Z)', 'redo', () => redo());
   const toolbar = h(
     'div.toolbar',
     {},
     playBtn,
-    h('button.icon', { title: 'Step one generation (N)', onclick: () => stepOnce() }, '⏭'),
-    h('button.icon', { title: 'Reset to the state when you last pressed play (R)', onclick: () => reset() }, '↺'),
+    backBtn,
+    ib('Step one generation (N or →)', 'step', () => stepOnce()),
+    ib('Reset to the state when you last pressed play (R)', 'reset', () => reset()),
     h('span.sep'),
     toolBtns.draw,
     toolBtns.erase,
     toolBtns.pan,
+    undoBtn,
+    redoBtn,
     h('span.sep'),
-    h('button.icon', { title: 'Zoom in (+)', onclick: () => zoomBy(1.4) }, '+'),
-    h('button.icon', { title: 'Zoom out (-)', onclick: () => zoomBy(1 / 1.4) }, '−'),
-    h('button.icon', { title: 'Fit to live cells (0)', onclick: () => fit() }, '⤢'),
+    ib('Zoom in (+)', 'plus', () => zoomBy(1.4)),
+    ib('Zoom out (-)', 'minus', () => zoomBy(1 / 1.4)),
+    ib('Fit to live cells (0)', 'fit', () => fit()),
     h('span.sep'),
-    h('button.icon', { title: 'Random soup', onclick: () => randomize() }, '⚄'),
-    h('button.icon', { title: 'Clear (C)', onclick: () => clearAll() }, '✕'),
+    ib('Random soup', 'dice', () => randomize()),
+    ib('Clear (C)', 'clear', () => clearAll()),
   );
   const hud = h('div.hud');
   const stampHint = h('div.stamp-hint');
-  const stage = h('div.stage', {}, glCanvas, overlay, toolbar, hud, stampHint);
+  // Shown when the board is empty, so a cleared board says what to do next.
+  const emptyState = h('div.state.center.empty-board', { hidden: true },
+    h('h3', {}, 'The board is empty'),
+    h('p', {}, 'Tap points to place stones, pick a pattern from the library, or scatter a random soup and press play.'),
+    h('div.actions', {},
+      h('button.primary', { onclick: () => { randomize(); setRunning(true); } }, icon('dice'), 'Random soup'),
+      h('button', { onclick: () => beginStamp('Glider', patternCells(getPattern('glider')!)) }, 'Place a glider'),
+      h('button', { onclick: () => patternsPanel.scrollIntoView({ behavior: reducedMotion() ? 'auto' : 'smooth', block: 'start' }) }, 'Browse patterns')));
+  const stage = h('div.stage', {}, glCanvas, overlay, toolbar, hud, stampHint, emptyState);
 
   // Stats panel
   const statEls = {
@@ -137,16 +162,14 @@ export function createSimulator(root: HTMLElement) {
     h(
       'div.row',
       {},
-      h('span', {}, 'Palette'),
+      h('span', {}, 'Stones'),
       select(PALETTES.map((p) => ({ value: p.id, label: p.name })), palette.id, (v) => {
         palette = getPalette(v);
         renderer.setPalette(palette);
-        drawPatternThumbs();
       }),
     ),
-    toggle('Grid lines', opts.grid, (v) => (opts.grid = v)).el,
-    toggle('Fading trails', opts.trails, (v) => (opts.trails = v)).el,
-    toggle('Glow', opts.glow, (v) => (opts.glow = v)).el,
+    toggle('Board lines', opts.grid, (v) => (opts.grid = v)).el,
+    toggle('Marks where stones were lifted', opts.trails, (v) => (opts.trails = v)).el,
     trailCtl.el,
   );
 
@@ -174,10 +197,10 @@ export function createSimulator(root: HTMLElement) {
     }
     patternList.append(grid);
   }
-  const patternsPanel = panel('Pattern library', h('p.blurb', {}, 'Click a pattern, then click the grid to place it. R rotates, F flips, Esc cancels.'), patternList);
+  const patternsPanel = panel('Pattern library', h('p.blurb', {}, 'Pick a pattern, then tap the board to place it. R rotates, F flips, Esc cancels.'), patternList);
 
   // Import / export
-  const recBtn = h('button', { onclick: () => toggleRecording() }, '● Record video');
+  const recBtn = h('button', { onclick: () => toggleRecording() }, icon('record'), 'Record video');
   const rleBox = h('textarea.rle', { rows: 5, spellcheck: 'false', placeholder: 'Paste RLE or plaintext (O = alive) here…' });
   const ioPanel = panel(
     'Import / export',
@@ -192,7 +215,7 @@ export function createSimulator(root: HTMLElement) {
     ),
   );
 
-  const treeBtn = h('button.primary.wide', { onclick: () => growTree() }, '🌳 Grow a lineage tree from this pattern');
+  const treeBtn = h('button.primary.wide', { onclick: () => growTree() }, icon('tree'), 'Grow a lineage tree from this pattern');
   const treePanel = panel(
     'Send this pattern to…',
     h('p.blurb', {}, 'The lineage tree follows every object as it splits, merges and dies. Works best on small seeds (methuselahs).'),
@@ -200,17 +223,20 @@ export function createSimulator(root: HTMLElement) {
     h(
       'div.row.wrap',
       {},
-      h('button', { onclick: () => sendTo('space') }, '🧊 3D spacetime'),
-      h('button', { onclick: () => sendTo('deep') }, '⏩ Deep time (Hashlife)'),
+      h('button', { onclick: () => sendTo('space') }, icon('cube'), '3D spacetime'),
+      h('button', { onclick: () => sendTo('deep') }, icon('forward'), 'Deep time (Hashlife)'),
     ),
   );
 
   const side = h('aside.side', {}, statsPanel, runPanel, patternsPanel, rulePanel, worldPanel, lookPanel, treePanel, ioPanel);
   root.append(h('div.sim', {}, stage, side));
 
-  const renderer: GridRenderer = createRenderer(glCanvas, palette);
+  const renderer: GridRenderer = createRenderer(glCanvas, palette, boardTheme());
+  onTheme(() => { renderer.setTheme(boardTheme()); drawPatternThumbs(); });
   life.trailDecay = Math.round(255 / 25);
   randomize();
+  undoStack = [];
+  syncHistoryButtons();
   setRunning(true);
   setTool('draw');
 
@@ -226,13 +252,14 @@ export function createSimulator(root: HTMLElement) {
     if (v && !running) snapshot = { cells: life.snapshot(), gen: life.generation };
     if (v && !snapshot) snapshot = { cells: life.snapshot(), gen: life.generation };
     running = v;
-    playBtn.textContent = v ? '❚❚' : '▶';
+    setIcon(playBtn, v ? 'pause' : 'play');
+    playBtn.setAttribute('aria-label', v ? 'Pause' : 'Play');
     playBtn.classList.toggle('playing', v);
   }
 
   function setTool(t: Tool) {
     tool = t;
-    for (const [k, b] of Object.entries(toolBtns)) b.classList.toggle('on', k === t);
+    for (const [k, b] of Object.entries(toolBtns)) { b.classList.toggle('on', k === t); b.setAttribute('aria-pressed', String(k === t)); }
     overlay.style.cursor = t === 'pan' ? 'grab' : 'crosshair';
   }
 
@@ -260,6 +287,7 @@ export function createSimulator(root: HTMLElement) {
     const dy = Math.floor((n - old.h) / 2);
     for (const [x, y] of old.liveCells()) next.set(x + dx, y + dy, 1);
     life = next;
+    past = []; undoStack = []; redoStack = []; syncHistoryButtons();
     view.cx = n / 2;
     view.cy = n / 2;
     resetHistory();
@@ -273,6 +301,7 @@ export function createSimulator(root: HTMLElement) {
   }
 
   function randomize(symmetric = false) {
+    beforeEdit();
     life.randomize(density);
     if (symmetric) {
       for (let y = 0; y < life.h; y++)
@@ -288,6 +317,7 @@ export function createSimulator(root: HTMLElement) {
   }
 
   function clearAll() {
+    if (life.population()) beforeEdit();
     life.clear();
     resetHistory();
     setRunning(false);
@@ -301,13 +331,58 @@ export function createSimulator(root: HTMLElement) {
     setRunning(false);
   }
 
+  function stepBack() {
+    const prev = past.pop();
+    if (!prev || prev.cells.length !== life.cells.length) {
+      toast(speed > 60 ? 'Turbo speed keeps no history to step back through' : 'Nothing earlier to go back to');
+      return;
+    }
+    setRunning(false);
+    life.restore(prev.cells, prev.gen);
+    pop.pop(); births.pop(); deaths.pop(); hashes.pop();
+    status = '';
+    syncHistoryButtons();
+  }
+
+  /** Call before any change you make by hand, so it can be undone. */
+  function beforeEdit() {
+    undoStack.push({ cells: life.snapshot(), gen: life.generation });
+    if (undoStack.length > 50) undoStack.shift();
+    redoStack = [];
+    past = [];
+    syncHistoryButtons();
+  }
+  function swapTo(from: Snap[], to: Snap[]) {
+    const snap = from.pop();
+    if (!snap || snap.cells.length !== life.cells.length) return;
+    to.push({ cells: life.snapshot(), gen: life.generation });
+    setRunning(false);
+    life.restore(snap.cells, snap.gen);
+    resetHistory();
+    past = [];
+    syncHistoryButtons();
+  }
+  const undo = () => swapTo(undoStack, redoStack);
+  const redo = () => swapTo(redoStack, undoStack);
+  function syncHistoryButtons() {
+    backBtn.disabled = !past.length;
+    undoBtn.disabled = !undoStack.length;
+    redoBtn.disabled = !redoStack.length;
+  }
+
   function stepOnce() {
     setRunning(false);
     doStep();
   }
 
   function doStep() {
+    // Copying the board every step is cheap at normal speeds; in turbo there is no going back.
+    if (speed <= 60) {
+      past.push({ cells: life.snapshot(), gen: life.generation });
+      if (past.length > pastLimit()) past.shift();
+    } else past = [];
     const s = life.step();
+    lastStepAt = performance.now();
     pop.push(s.population);
     births.push(s.births);
     deaths.push(s.deaths);
@@ -426,12 +501,12 @@ export function createSimulator(root: HTMLElement) {
       a.click();
       setTimeout(() => URL.revokeObjectURL(a.href), 10_000);
       recorder = null;
-      recBtn.textContent = '● Record video';
+      setIcon(recBtn, 'record', 'Record video');
       recBtn.classList.remove('recording');
       toast(`Saved ${(blob.size / 1e6).toFixed(1)} MB video`);
     };
     recorder.start(250);
-    recBtn.textContent = '■ Stop recording';
+    setIcon(recBtn, 'stop', 'Stop recording');
     recBtn.classList.add('recording');
     toast('Recording… press Stop to save');
   }
@@ -464,6 +539,7 @@ export function createSimulator(root: HTMLElement) {
 
   on('sim:load', ({ cells, name, rule }) => {
     if (rule) setRule(rule);
+    beforeEdit();
     life.clear();
     resetHistory();
     const b = bounds(cells)!;
@@ -477,7 +553,7 @@ export function createSimulator(root: HTMLElement) {
   });
 
   function drawPatternThumbs() {
-    const col = css(palette.alive[1]);
+    const col = tok('--ink');
     for (const [c, p] of thumbs) drawThumb(c, patternCells(p), col);
   }
 
@@ -506,12 +582,14 @@ export function createSimulator(root: HTMLElement) {
     }
     const [wx, wy] = screenToWorld(p.x, p.y).map(Math.floor) as [number, number];
     if (stamp) {
+      beforeEdit();
       for (const [x, y] of stampCells()) life.set(wx + x, wy + y, 1);
       seedName = life.population() === stamp.cells.length ? stamp.name : 'Your pattern';
       if (!e.shiftKey) endStamp();
       return;
     }
     const value = tool === 'erase' ? 0 : life.get(wx, wy) ? 0 : 1;
+    beforeEdit();
     painting = { value, last: [wx, wy] };
     seedName = 'Your pattern';
     life.set(wx, wy, value);
@@ -568,6 +646,15 @@ export function createSimulator(root: HTMLElement) {
     const tgt = e.target as HTMLElement;
     if (tgt && ['INPUT', 'TEXTAREA', 'SELECT'].includes(tgt.tagName)) return;
     const k = e.key.toLowerCase();
+    if ((e.ctrlKey || e.metaKey) && k === 'z') {
+      e.preventDefault();
+      if (e.shiftKey) redo(); else undo();
+      return;
+    }
+    if ((e.ctrlKey || e.metaKey) && k === 'y') { e.preventDefault(); redo(); return; }
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (k === 'arrowleft' || k === 'b') { e.preventDefault(); stepBack(); return; }
+    if (k === 'arrowright') { e.preventDefault(); stepOnce(); return; }
     if (k === ' ') {
       e.preventDefault();
       setRunning(!running);
@@ -628,6 +715,7 @@ export function createSimulator(root: HTMLElement) {
     draw();
     if (now - lastStats > 120) {
       lastStats = now;
+      syncHistoryButtons();
       updateStats();
     }
   }
@@ -635,6 +723,8 @@ export function createSimulator(root: HTMLElement) {
   function draw() {
     fitCanvas(glCanvas);
     fitCanvas(overlay);
+    // Stones only animate at speeds slow enough to see it; faster runs show the settled board.
+    opts.sinceStep = reducedMotion() || (running && speed > 12) ? 1 : (performance.now() - lastStepAt) / 1000;
     renderer.draw(life, view, opts);
     drawOverlay();
   }
@@ -649,18 +739,25 @@ export function createSimulator(root: HTMLElement) {
     const sx = (x: number) => (x - view.cx) * z + W / 2;
     const sy = (y: number) => (y - view.cy) * z + H / 2;
     // World border
-    ctx.strokeStyle = palette.id === 'mono' ? 'rgba(0,0,0,0.35)' : 'rgba(140,170,255,0.35)';
+    ctx.strokeStyle = alpha('--ink', 0.35);
     ctx.lineWidth = 1;
     ctx.setLineDash([4, 4]);
     ctx.strokeRect(sx(0), sy(0), life.w * z, life.h * z);
     ctx.setLineDash([]);
     if (hover && !panning) {
       if (stamp) {
-        ctx.fillStyle = css(palette.alive[1], 0.55);
-        for (const [x, y] of stampCells()) ctx.fillRect(sx(hover[0] + x), sy(hover[1] + y), z, z);
+        // A ghost of the pattern, as stones held just above the board.
+        ctx.fillStyle = alpha('--slate', 0.45);
+        for (const [x, y] of stampCells()) {
+          if (z >= 5) { ctx.beginPath(); ctx.arc(sx(hover[0] + x + 0.5), sy(hover[1] + y + 0.5) - z * 0.08, z * 0.44, 0, Math.PI * 2); ctx.fill(); }
+          else ctx.fillRect(sx(hover[0] + x), sy(hover[1] + y), z, z);
+        }
       } else if (z >= 4) {
-        ctx.strokeStyle = palette.id === 'mono' ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.6)';
-        ctx.strokeRect(sx(hover[0]) + 0.5, sy(hover[1]) + 0.5, z - 1, z - 1);
+        ctx.strokeStyle = alpha('--ink', 0.7);
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(sx(hover[0] + 0.5), sy(hover[1] + 0.5), Math.max(2, z * 0.47), 0, Math.PI * 2);
+        ctx.stroke();
       }
     }
   }
@@ -675,15 +772,16 @@ export function createSimulator(root: HTMLElement) {
     statEls.rate.textContent = running ? measuredRate.toFixed(0) : '0';
     statEls.status.textContent = status || (running ? 'evolving' : 'paused');
     statEls.status.dataset.s = status.split(' ')[0];
-    hud.textContent = `gen ${fmt(life.generation)} · pop ${fmt(p)} · ${life.rule.name} · ${renderer.kind === 'webgl2' ? 'WebGL2' : 'Canvas'}${hover ? ` · (${hover[0]}, ${hover[1]})` : ''}`;
+    emptyState.hidden = p > 0 || !!stamp;
+    hud.textContent = `Generation ${fmt(life.generation)} · ${fmt(p)} stones · ${life.rule.name}${renderer.kind === 'webgl2' ? '' : ' · Canvas mode'}${hover ? ` · ${hover[0]}, ${hover[1]}` : ''}`;
     const start = Math.max(0, life.generation - pop.length);
     const xs = pop.map((_, i) => start + i + 1);
     drawChart(
       chart,
       [
-        { values: pop, xs, color: '#7df9ff', label: 'population', fill: true },
-        { values: births, xs, color: '#38e8a8', label: 'births', width: 1 },
-        { values: deaths, xs, color: '#ff4fa3', label: 'deaths', width: 1 },
+        { values: pop, xs, color: tok('--ink'), label: 'population', fill: true },
+        { values: births, xs, color: tok('--data-pine'), label: 'births', width: 1 },
+        { values: deaths, xs, color: tok('--data-shu'), label: 'deaths', width: 1 },
       ],
       { legend: true },
     );
@@ -702,7 +800,10 @@ export function createSimulator(root: HTMLElement) {
           thumbsDrawn = true;
         }
         if (!fitted) {
-          fit(true);
+          // Open close enough that cells read as stones on a board.
+          view.cx = life.w / 2;
+          view.cy = life.h / 2;
+          view.zoom = 11;
           fitted = true;
         }
       });

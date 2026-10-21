@@ -5,6 +5,8 @@ import { getPattern, patternCells } from '../engine/patterns';
 import { drawChart } from './chart';
 import { fitCanvas, fmt, h, select, slider, toast } from './dom';
 import { on } from './bus';
+import { alpha, onTheme, tok } from './theme';
+import { CellPainter, drawBoardLines } from './thumb';
 
 const SEEDS = ['gosper', 'simkin', 'switchengine', 'line', 'acorn', 'rabbits', 'rpentomino', 'copperhead', 'glider'];
 
@@ -136,12 +138,12 @@ export function createDeepView(root: HTMLElement) {
     const pts = history.filter((p) => p.g > 0 && p.p > 0);
     const xs = pts.map((p) => Math.log10(p.g));
     const ys = pts.map((p) => Math.log10(p.p));
-    const series = [{ values: ys, xs, color: '#7df9ff', label: 'log₁₀ population', dots: true, width: 1.5 }];
+    const series = [{ values: ys, xs, color: '--ink', label: 'log₁₀ population', dots: true, width: 1.5 }];
     if (pts.length > 1) {
       const x0 = xs[0], y0 = ys[0];
       const xe = xs[xs.length - 1];
-      series.push({ values: [y0, y0 + (xe - x0)], xs: [x0, xe], color: '#ffb020', label: 'slope 1', dots: false, width: 1 });
-      series.push({ values: [y0, y0 + 2 * (xe - x0)], xs: [x0, xe], color: '#ff4fa3', label: 'slope 2', dots: false, width: 1 });
+      series.push({ values: [y0, y0 + (xe - x0)], xs: [x0, xe], color: '--data-ochre', label: 'slope 1', dots: false, width: 1 });
+      series.push({ values: [y0, y0 + 2 * (xe - x0)], xs: [x0, xe], color: '--data-shu', label: 'slope 2', dots: false, width: 1 });
     }
     drawChart(chart, series.map((s) => (s.label === 'log₁₀ population' ? s : { ...s, dash: [4, 3] })), { legend: true, xLabel: 'log₁₀ generation', yMax: Math.max(...ys, 1) + 0.5 });
     dirty = true;
@@ -153,26 +155,27 @@ export function createDeepView(root: HTMLElement) {
     const dpr = canvas.width / Math.max(1, canvas.clientWidth);
     const W = canvas.clientWidth, H = canvas.clientHeight;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.fillStyle = '#04060d';
+    ctx.fillStyle = tok('--board');
     ctx.fillRect(0, 0, W, H);
     const px = view.cellPx;
     const vx0 = view.cx - W / 2 / px, vy0 = view.cy - H / 2 / px;
     const viewRect = { x0: vx0 - 1, y0: vy0 - 1, x1: vx0 + W / px + 1, y1: vy0 + H / px + 1 };
     // Stop descending at squares about one pixel wide.
     const minSize = Math.max(1, 2 ** Math.floor(Math.log2(Math.max(1, 1 / px))));
-    const gap = px >= 5 ? 1 : 0;
+    drawBoardLines(ctx, W, H, px, -vx0 * px, -vy0 * px);
+    // Single cells are stones (or flat slate squares when small); squares that
+    // stand for many cells are slate, darker the more of them are alive.
+    const stones = new CellPainter(px);
     life.visit(minSize, viewRect, (x, y, s, d) => {
       const sx = (x - vx0) * px, sy = (y - vy0) * px;
+      if (s === 1) return stones.add(sx, sy);
       const size = Math.max(1, s * px);
-      if (s === 1) ctx.fillStyle = '#9ff7ff';
-      else {
-        const a = Math.min(1, 0.25 + Math.sqrt(d) * 1.6);
-        ctx.fillStyle = `rgba(125, 249, 255, ${a})`;
-      }
-      ctx.fillRect(sx, sy, size - gap, size - gap);
+      ctx.fillStyle = alpha('--slate', Math.min(1, 0.55 + Math.sqrt(d) * 1.6));
+      ctx.fillRect(sx, sy, size, size);
     });
-    ctx.fillStyle = 'rgba(200,215,255,0.7)';
-    ctx.font = '12px ui-monospace, monospace';
+    stones.fill(ctx);
+    ctx.fillStyle = tok('--ink-2');
+    ctx.font = `12px ${tok('--ui')}`;
     ctx.fillText(`1 px = ${px >= 1 ? '1 cell' : `${fmt(Math.round(1 / px))} cells`}`, 12, H - 12);
   }
 
@@ -209,6 +212,7 @@ export function createDeepView(root: HTMLElement) {
     }
   });
   window.addEventListener('resize', () => (dirty = true));
+  onTheme(() => { if (life.generation || history.length) updateStats(); dirty = true; });
 
   on('deep:load', ({ cells }) => {
     seedCells = cells;

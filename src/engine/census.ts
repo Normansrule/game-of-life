@@ -20,7 +20,7 @@ export function randomSoup(size: number, density: number, rng: () => number): Ce
 }
 
 export interface SoupResult {
-  /** Objects left at the end (and spaceships that flew away, prefixed with "↗ "). */
+  /** Objects left at the end (and spaceships that flew away, marked "(flew off)", as in the lineage tree). */
   objects: Map<string, number>;
   settledAt: number;
   finalPopulation: number;
@@ -38,7 +38,7 @@ export function runSoup(cells: Cell[], maxGen = 6000): SoupResult {
   const objects = new Map<string, number>();
   for (const s of r.segments) {
     if (s.fate !== 'running' && s.fate !== 'escaped') continue;
-    const name = (s.fate === 'escaped' ? '↗ ' : '') + (s.label ?? 'unclassified');
+    const name = (s.label ?? 'unclassified') + (s.fate === 'escaped' ? ' (flew off)' : '');
     objects.set(name, (objects.get(name) ?? 0) + 1);
   }
   return { objects, settledAt: r.settledAt, finalPopulation: r.populations.at(-1) ?? 0, initialPopulation: cells.length };

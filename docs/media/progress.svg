@@ -1,23 +1,29 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="720" height="314" viewBox="0 0 720 314" role="img" aria-label="Roadmap progress: 31 of 41 items done">
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="314" viewBox="0 0 720 314" role="img" aria-label="Roadmap progress: 33 of 43 items done">
   <style>
-    text { font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; fill: #e6ecff; }
+    /* Common Room colours: ink and slate on kaya, with a lamplight version for dark mode. */
+    .bg { fill: #EBD3A1; } .track { fill: rgba(47, 33, 14, 0.14); } .fill { fill: #1E1D1C; } .star { fill: #2F210E; }
+    text { font-family: 'Bricolage Grotesque', -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; fill: #2F210E; }
     .title { font-size: 18px; font-weight: 600; }
     .label { font-size: 14px; }
     .num { font-size: 13px; font-family: ui-monospace, Menlo, Consolas, monospace; }
-    .dim { fill: #8b95b8; }
+    .dim { fill: #6B5432; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #241A11; } .track { fill: rgba(241, 223, 188, 0.14); } .fill { fill: #F1DFBC; } .star { fill: #F1DFBC; }
+      text { fill: #F1DFBC; } .dim { fill: #B59D78; }
+    }
     .grow { transform-box: fill-box; transform-origin: left; animation: grow 1.1s cubic-bezier(.2,.8,.2,1) both; }
     @keyframes grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
     @media (prefers-reduced-motion: reduce) { .grow { animation: none; } }
   </style>
-  <defs><linearGradient id="all" x1="0" x2="1"><stop offset="0" stop-color="#7df9ff"/><stop offset="1" stop-color="#c084fc"/></linearGradient></defs>
-  <rect width="720" height="314" rx="14" fill="#060913"/>
-  <text x="24" y="36" class="title">Life Tree roadmap</text>
-  <text x="696" y="36" class="num" text-anchor="end">31 / 41 done · 76%</text>
-  <rect x="24" y="50" width="672" height="18" rx="9" fill="#1b2340"/><rect class="grow" style="animation-delay:0.00s" x="24" y="50" width="508.1" height="18" rx="9" fill="url(#all)"/>
-  <text x="24" y="106" class="label">Simulator</text><rect x="210" y="94" width="380" height="14" rx="7" fill="#1b2340"/><rect class="grow" style="animation-delay:0.30s" x="210" y="94" width="271.4" height="14" rx="7" fill="#7df9ff"/><text x="606" y="106" class="num">71%  <tspan class="dim">5/7</tspan></text>
-  <text x="24" y="140" class="label">Trees and time</text><rect x="210" y="128" width="380" height="14" rx="7" fill="#1b2340"/><rect class="grow" style="animation-delay:0.42s" x="210" y="128" width="271.4" height="14" rx="7" fill="#c084fc"/><text x="606" y="140" class="num">71%  <tspan class="dim">5/7</tspan></text>
-  <text x="24" y="174" class="label">Math</text><rect x="210" y="162" width="380" height="14" rx="7" fill="#1b2340"/><rect class="grow" style="animation-delay:0.54s" x="210" y="162" width="337.8" height="14" rx="7" fill="#f472b6"/><text x="606" y="174" class="num">89%  <tspan class="dim">8/9</tspan></text>
-  <text x="24" y="208" class="label">Applications</text><rect x="210" y="196" width="380" height="14" rx="7" fill="#1b2340"/><rect class="grow" style="animation-delay:0.66s" x="210" y="196" width="285.0" height="14" rx="7" fill="#facc15"/><text x="606" y="208" class="num">75%  <tspan class="dim">3/4</tspan></text>
-  <text x="24" y="242" class="label">Games and labs</text><rect x="210" y="230" width="380" height="14" rx="7" fill="#1b2340"/><rect class="grow" style="animation-delay:0.78s" x="210" y="230" width="285.0" height="14" rx="7" fill="#4ade80"/><text x="606" y="242" class="num">75%  <tspan class="dim">3/4</tspan></text>
-  <text x="24" y="276" class="label">Apps and publishing</text><rect x="210" y="264" width="380" height="14" rx="7" fill="#1b2340"/><rect class="grow" style="animation-delay:0.90s" x="210" y="264" width="266.0" height="14" rx="7" fill="#60a5fa"/><text x="606" y="276" class="num">70%  <tspan class="dim">7/10</tspan></text>
+  <rect width="720" height="314" rx="8" class="bg"/>
+  <circle cx="28" cy="30" r="4" class="star"/>
+  <text x="42" y="36" class="title">Life Tree roadmap</text>
+  <text x="696" y="36" class="num" text-anchor="end">33 / 43 done · 77%</text>
+  <rect x="24" y="50" width="672" height="18" rx="9" class="track"/><rect class="grow" style="animation-delay:0.00s" x="24" y="50" width="515.7" height="18" rx="9" class="fill"/>
+  <text x="24" y="106" class="label">Simulator</text><rect x="210" y="94" width="380" height="14" rx="7" class="track"/><rect class="grow" style="animation-delay:0.30s" x="210" y="94" width="271.4" height="14" rx="7" class="fill"/><text x="606" y="106" class="num">71%  <tspan class="dim">5/7</tspan></text>
+  <text x="24" y="140" class="label">Trees and time</text><rect x="210" y="128" width="380" height="14" rx="7" class="track"/><rect class="grow" style="animation-delay:0.42s" x="210" y="128" width="271.4" height="14" rx="7" class="fill"/><text x="606" y="140" class="num">71%  <tspan class="dim">5/7</tspan></text>
+  <text x="24" y="174" class="label">Math</text><rect x="210" y="162" width="380" height="14" rx="7" class="track"/><rect class="grow" style="animation-delay:0.54s" x="210" y="162" width="337.8" height="14" rx="7" class="fill"/><text x="606" y="174" class="num">89%  <tspan class="dim">8/9</tspan></text>
+  <text x="24" y="208" class="label">Applications</text><rect x="210" y="196" width="380" height="14" rx="7" class="track"/><rect class="grow" style="animation-delay:0.66s" x="210" y="196" width="285.0" height="14" rx="7" class="fill"/><text x="606" y="208" class="num">75%  <tspan class="dim">3/4</tspan></text>
+  <text x="24" y="242" class="label">Games and labs</text><rect x="210" y="230" width="380" height="14" rx="7" class="track"/><rect class="grow" style="animation-delay:0.78s" x="210" y="230" width="285.0" height="14" rx="7" class="fill"/><text x="606" y="242" class="num">75%  <tspan class="dim">3/4</tspan></text>
+  <text x="24" y="276" class="label">Apps and publishing</text><rect x="210" y="264" width="380" height="14" rx="7" class="track"/><rect class="grow" style="animation-delay:0.90s" x="210" y="264" width="285.0" height="14" rx="7" class="fill"/><text x="606" y="276" class="num">75%  <tspan class="dim">9/12</tspan></text>
 </svg>
