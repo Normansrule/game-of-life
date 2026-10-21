@@ -170,7 +170,7 @@ export function createDeepView(root: HTMLElement) {
       const sx = (x - vx0) * px, sy = (y - vy0) * px;
       if (s === 1) return stones.add(sx, sy);
       const size = Math.max(1, s * px);
-      ctx.fillStyle = alpha('--slate', Math.min(1, 0.25 + Math.sqrt(d) * 1.6));
+      ctx.fillStyle = alpha('--slate', Math.min(1, 0.55 + Math.sqrt(d) * 1.6));
       ctx.fillRect(sx, sy, size, size);
     });
     stones.fill(ctx);

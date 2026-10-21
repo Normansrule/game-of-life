@@ -111,7 +111,7 @@ export function caveDemo(): Demo {
   let g = new Uint8Array(W * H);
   let fill = 0.45;
   let steps = 0;
-  const label = h('span.mono');
+  const label = h('span.readout');
   // Open floor is the board; rock is slate, with a little grain so it reads as stone.
   const pal = themed(() => {
     const slate = rgb('--slate'), edge = rgb('--board-edge');
@@ -275,7 +275,7 @@ export function rule30Demo(): Demo {
     ones = total = 0;
   };
   reset();
-  const statsEl = h('span.mono');
+  const statsEl = h('span.readout');
   // Slate stones on the board; the centre column, the one read as random bits, in vermilion.
   const pal = themed(() => {
     const board = rgb('--board'), shu = rgb('--data-shu');
@@ -390,7 +390,7 @@ export function denoiseDemo(): Demo {
   let clean = new Uint8Array(W * H);
   let g = new Uint8Array(W * H);
   let noise = 0.2;
-  const errEl = h('span.mono');
+  const errEl = h('span.readout');
   const stones = themed(() => ({ board: rgb('--board'), stone: rgb('--slate') }));
   const makeClean = () => {
     const c = document.createElement('canvas');
@@ -564,7 +564,7 @@ export function wireworldDemo(): Demo {
     px.paint((i) => p[g[i]]);
   };
   const legend = h('div.fig-controls', {},
-    h('span.mono', {}, 'blue = electron head · red = tail · ochre = copper wire'),
+    h('span.readout', {}, 'blue = electron head · red = tail · ochre = copper wire'),
     h('button', { onclick: reset }, 'Reset'));
   const labels = h('p.blurb', {}, 'Top: a diode lets electrons through. Middle: the same diode reversed blocks them. Bottom: one wire fans out into two. Each loop on the left is a clock.');
   return { el: h('div', {}, px.canvas, labels, legend), tick, reset };
@@ -577,7 +577,7 @@ export function langtonDemo(): Demo {
   let g = new Uint8Array(W * H);
   let ax = 0, ay = 0, dir = 0, steps = 0;
   let speed = 60;
-  const stepsEl = h('span.mono');
+  const stepsEl = h('span.readout');
   // The ant walks on the board; black squares are slate stones, the ant itself vermilion.
   const pal = themed(() => ({ board: rgb('--board'), stone: rgb('--slate'), ant: rgb('--data-shu') }));
   const reset = () => {

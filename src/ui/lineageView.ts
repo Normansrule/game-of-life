@@ -104,7 +104,7 @@ export function createLineageView(root: HTMLElement) {
     if (playing && result && gen >= result.generations) gen = 0;
     setIcon(playBtn, playing ? 'pause' : 'play');
   } }, icon('play'));
-  const genLabel = h('span.mono');
+  const genLabel = h('span.readout');
   const popChart = h('canvas.chart.small');
   const info = h('div.seg-info');
   const summary = h('div.summary');
@@ -478,7 +478,7 @@ export function createLineageView(root: HTMLElement) {
     }
     off.fill(ctx, alpha('--slate', 0.25), false);
     on.fill(ctx);
-    genLabel.textContent = `gen ${gen}`;
+    genLabel.textContent = `Generation ${gen}`;
   }
 
   function renderSummary() {
@@ -487,8 +487,8 @@ export function createLineageView(root: HTMLElement) {
     const rows: [string, string][] = [
       ['Seed', `${seedName} (${seedCells.length} cells)`],
       ['Generations run', fmt(r.generations)],
-      ['Reaction settles at', `gen ${fmt(r.settledAt)}`],
-      ['World stable at', r.stabilizedAt !== null ? `gen ${fmt(r.stabilizedAt)} (period ${r.finalPeriod})` : 'still evolving'],
+      ['Reaction settles at', `generation ${fmt(r.settledAt)}`],
+      ['World stable at', r.stabilizedAt !== null ? `generation ${fmt(r.stabilizedAt)} (period ${r.finalPeriod})` : 'still evolving'],
       ['Branches (segments)', fmt(r.segments.length)],
       ['Splits', fmt(r.splits)],
       ['Merges (collisions)', fmt(r.merges)],
@@ -540,7 +540,7 @@ export function createLineageView(root: HTMLElement) {
         'dl',
         {},
         h('dt', {}, 'Object'), h('dd', {}, s.label ?? (s.fate === 'split' || s.fate === 'merged' ? 'active reaction' : 'unclassified')),
-        h('dt', {}, 'Lifetime'), h('dd', {}, `gen ${s.start} → ${s.end} (${s.end - s.start + 1} gens)`),
+        h('dt', {}, 'Lifetime'), h('dd', {}, `generations ${s.start} to ${s.end} (${s.end - s.start + 1})`),
         h('dt', {}, 'Fate'), h('dd', {}, fateText[s.fate]),
         h('dt', {}, 'Cells'), h('dd', {}, `${s.startCells.length} → ${s.endCells.length} (peak ${s.peak})`),
         h('dt', {}, 'Parents'), h('dd', {}, s.parents.length ? String(s.parents.length) : 'root'),
@@ -593,7 +593,7 @@ export function createLineageView(root: HTMLElement) {
     hoverSeg = pick(e.offsetX, e.offsetY);
     if (hoverSeg >= 0 && result) {
       const s = result.segments[hoverSeg];
-      tooltip.textContent = `${s.label ?? (s.fate === 'died' ? 'dies' : 'reaction')} · gen ${s.start}–${s.end} · ${s.endCells.length} cells`;
+      tooltip.textContent = `${s.label ?? (s.fate === 'died' ? 'dies' : 'reaction')} · generations ${s.start}–${s.end} · ${s.endCells.length} cells`;
       tooltip.style.transform = `translate(${e.offsetX + 14}px, ${e.offsetY + 10}px)`;
       tooltip.classList.add('show');
       if (selected < 0) showInfo(hoverSeg);

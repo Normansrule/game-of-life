@@ -96,7 +96,7 @@ export function createMathView(root: HTMLElement) {
 
   // ---- Figure: accuracy against initial density for GKL and local majority ----
   const dcChart = h('canvas.chart.tall');
-  const dcNote = h('span.mono', {}, ...working('Running random rings…'));
+  const dcNote = h('span.readout', {}, ...working('Running random rings…'));
   const runDensityFigure = () => {
     const N = 149, per = 30;
     const ks: number[] = [];
@@ -130,7 +130,7 @@ export function createMathView(root: HTMLElement) {
 
   // ---- Figure: Langton's lambda vs activity for random rules ----
   const edgeChart = h('canvas.chart.tall');
-  const edgeNote = h('span.mono', {}, ...working('Classifying random rules…'));
+  const edgeNote = h('span.readout', {}, ...working('Classifying random rules…'));
   const edgeBars = h('canvas.chart.small');
   const edgePts: { lambda: number; activity: number; cls: RuleClass; rule: string }[] = [];
   let edgeSeed = 1;
@@ -178,9 +178,9 @@ export function createMathView(root: HTMLElement) {
 
   // ---- Figure: sandpile identity and avalanche statistics ----
   const idCanvas = h('canvas.demo-canvas.identity', { width: 128, height: 96 });
-  const idNote = h('span.mono', {}, ...working('Computing the identity…'));
+  const idNote = h('span.readout', {}, ...working('Computing the identity…'));
   const avChart = h('canvas.chart');
-  const avNote = h('span.mono', {}, ...working('Dropping 30,000 grains…'));
+  const avNote = h('span.readout', {}, ...working('Dropping 30,000 grains…'));
   let identity: Uint8Array | null = null;
   const paintIdentity = () => {
     if (!identity) return;
@@ -204,7 +204,7 @@ export function createMathView(root: HTMLElement) {
     for (const [w, hh] of [[1, 1], [2, 2], [3, 3], [4, 4], [5, 5], [6, 6], [8, 8], [10, 10]]) {
       const o = sandpileGroupOrder(w, hh);
       const str = o.toString();
-      rows.push(h('tr', {}, h('td', {}, `${w}×${hh}`), h('td.mono', {}, str.length > 24 ? `${str.slice(0, 6)}… (${str.length} digits)` : str.replace(/\B(?=(\d{3})+(?!\d))/g, ','))));
+      rows.push(h('tr', {}, h('td', {}, `${w}×${hh}`), h('td.readout', {}, str.length > 24 ? `${str.slice(0, 6)}… (${str.length} digits)` : str.replace(/\B(?=(\d{3})+(?!\d))/g, ','))));
     }
     orderRows.replaceChildren(...rows);
     setTimeout(() => {
@@ -608,7 +608,7 @@ $$K^{2^k} = K(u^{2^k}, v^{2^k}),$$
 <p>Why it works: a level-$k$ node is split into nine overlapping level-$(k-1)$ squares, each advanced recursively, then recombined into four squares and advanced again. With memoisation the cost depends on the number of <em>distinct</em> squares in space-time, not on area or time, so a pattern with regular structure costs $O(\log t)$ to advance $t$ generations.</p>`),
 
       section('census', '14. A census of random soups', `
-<p>What does Life "usually" make? Fill a $16\times16$ square at random with density $\tfrac12$, run it until it stabilises, and identify everything left over (spaceships that fly away are counted with ↗). Repeat many times. This is what Adam Goucher's <em>apgsearch</em> does across thousands of volunteer computers for the public census <a href="https://catagolue.hatsya.com" target="_blank" rel="noopener">Catagolue</a>; the most common objects there are the block, blinker, beehive, glider and loaf.</p>
+<p>What does Life "usually" make? Fill a $16\times16$ square at random with density $\tfrac12$, run it until it stabilises, and identify everything left over (spaceships that fly away are counted as "flew off"). Repeat many times. This is what Adam Goucher's <em>apgsearch</em> does across thousands of volunteer computers for the public census <a href="https://catagolue.hatsya.com" target="_blank" rel="noopener">Catagolue</a>; the most common objects there are the block, blinker, beehive, glider and loaf.</p>
 <p>Two statistics are worth watching. The <b>rank–frequency</b> plot (log–log) tests for <b>Zipf-like</b> behaviour $f(r) \propto r^{-s}$, a straight line of slope $-s$. The <b>Shannon diversity</b> $H = -\sum_i p_i \log_2 p_i$ measures how evenly the ash is spread over object types; $2^H$ is the "effective number" of species.</p>`,
         figure('Census of random 16×16 soups, computed live (seeded, so each run is reproducible).', censusUI()),
       ),

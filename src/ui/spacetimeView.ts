@@ -42,11 +42,15 @@ export function createSpacetimeView(root: HTMLElement) {
   let renderer: SpacetimeRenderer | null = null;
   let extent = 40;
   const cam = { yaw: 0.8, pitch: 0.7, dist: 120 };
+  // Until you zoom, the camera dollies back as the tower grows, so it always fills the view.
+  // The vertical field of view is 0.8 rad, so a tower of height H fits at about 1.5H away.
+  let userZoomed = false;
+  const fitDist = (height: number) => Math.max(extent * 1.2, height * layerGap * 1.5) + 15;
   let instanceCount = 0;
 
   const canvas = h('canvas.space-canvas');
-  const countEl = h('span.mono');
-  const genEl = h('span.mono');
+  const countEl = h('span.readout');
+  const genEl = h('span.readout');
   const scrub = h('input.scrub', { type: 'range', min: 0, max: 150, value: 0, step: 1 }) as HTMLInputElement;
   scrub.addEventListener('input', () => {
     reveal = +scrub.value;
@@ -104,13 +108,13 @@ export function createSpacetimeView(root: HTMLElement) {
     instanceCount = total;
     tMax = r.frames.length - 1;
     extent = Math.max(x1 - x0, y1 - y0, 10);
-    // The vertical field of view is 0.8 rad, so a tower of height H fits at about 1.5H away.
-    cam.dist = Math.max(extent * 1.2, tMax * layerGap * 1.5) + 15;
+    userZoomed = false;
+    cam.dist = fitDist(tMax * 0.35);
     scrub.max = String(tMax);
     reveal = 0;
     playing = true;
     renderer?.setInstances(data);
-    countEl.textContent = `${fmt(instanceCount)} cubes`;
+    countEl.textContent = `${fmt(instanceCount)} stones`;
   }
 
   let drag: { x: number; y: number; yaw: number; pitch: number } | null = null;
@@ -126,6 +130,7 @@ export function createSpacetimeView(root: HTMLElement) {
   canvas.addEventListener('pointerup', () => (drag = null));
   canvas.addEventListener('wheel', (e) => {
     e.preventDefault();
+    userZoomed = true;
     cam.dist = Math.max(10, Math.min(3000, cam.dist * Math.exp(e.deltaY * 0.0012)));
   }, { passive: false });
 
@@ -141,6 +146,7 @@ export function createSpacetimeView(root: HTMLElement) {
       scrub.value = String(Math.floor(reveal));
     }
     if (autoRotate && !drag) cam.yaw += dt * 0.15;
+    if (!userZoomed) cam.dist += (fitDist(Math.max(reveal, tMax * 0.35)) - cam.dist) * Math.min(1, dt * 4);
     fitCanvas(canvas);
     const midY = (Math.min(reveal, tMax) * layerGap) / 2;
     const eye = [
@@ -151,7 +157,7 @@ export function createSpacetimeView(root: HTMLElement) {
     const proj = perspective(0.8, canvas.width / Math.max(1, canvas.height), 0.5, cam.dist * 4 + 500);
     const viewM = lookAt(eye, [0, midY, 0], [0, 1, 0]);
     renderer.draw(multiply(proj, viewM), { reveal, tMax, layerGap, fogFar: cam.dist * 2.2 + extent, colorMode });
-    genEl.textContent = `generation ${Math.floor(reveal)} / ${tMax}`;
+    genEl.textContent = `Generation ${Math.floor(reveal)} of ${tMax}`;
   }
   requestAnimationFrame(frame);
 

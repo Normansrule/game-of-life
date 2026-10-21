@@ -35,6 +35,13 @@ export function createSimulator(root: HTMLElement) {
   let seedName = 'Your pattern';
   let active = false;
   let snapshot: { cells: Uint8Array; gen: number } | null = null;
+  type Snap = { cells: Uint8Array; gen: number };
+  // The last few generations, so you can step back in time, and the edits you can undo.
+  // Both are cleared whenever the board is resized, since old snapshots no longer fit.
+  let past: Snap[] = [];
+  let undoStack: Snap[] = [];
+  let redoStack: Snap[] = [];
+  const pastLimit = () => Math.min(240, Math.max(16, Math.floor(24e6 / (life.w * life.h))));
   const pop: number[] = [];
   const births: number[] = [];
   const deaths: number[] = [];
@@ -52,16 +59,22 @@ export function createSimulator(root: HTMLElement) {
     erase: ib('Erase (E)', 'erase', () => setTool('erase')),
     pan: ib('Pan (H). You can also drag with the right mouse button.', 'pan', () => setTool('pan')),
   };
+  const backBtn = ib('Step back one generation (B or ←)', 'back', () => stepBack());
+  const undoBtn = ib('Undo the last edit (Ctrl+Z)', 'undo', () => undo());
+  const redoBtn = ib('Redo (Ctrl+Shift+Z)', 'redo', () => redo());
   const toolbar = h(
     'div.toolbar',
     {},
     playBtn,
-    ib('Step one generation (N)', 'step', () => stepOnce()),
+    backBtn,
+    ib('Step one generation (N or →)', 'step', () => stepOnce()),
     ib('Reset to the state when you last pressed play (R)', 'reset', () => reset()),
     h('span.sep'),
     toolBtns.draw,
     toolBtns.erase,
     toolBtns.pan,
+    undoBtn,
+    redoBtn,
     h('span.sep'),
     ib('Zoom in (+)', 'plus', () => zoomBy(1.4)),
     ib('Zoom out (-)', 'minus', () => zoomBy(1 / 1.4)),
@@ -222,6 +235,8 @@ export function createSimulator(root: HTMLElement) {
   onTheme(() => { renderer.setTheme(boardTheme()); drawPatternThumbs(); });
   life.trailDecay = Math.round(255 / 25);
   randomize();
+  undoStack = [];
+  syncHistoryButtons();
   setRunning(true);
   setTool('draw');
 
@@ -272,6 +287,7 @@ export function createSimulator(root: HTMLElement) {
     const dy = Math.floor((n - old.h) / 2);
     for (const [x, y] of old.liveCells()) next.set(x + dx, y + dy, 1);
     life = next;
+    past = []; undoStack = []; redoStack = []; syncHistoryButtons();
     view.cx = n / 2;
     view.cy = n / 2;
     resetHistory();
@@ -285,6 +301,7 @@ export function createSimulator(root: HTMLElement) {
   }
 
   function randomize(symmetric = false) {
+    beforeEdit();
     life.randomize(density);
     if (symmetric) {
       for (let y = 0; y < life.h; y++)
@@ -300,6 +317,7 @@ export function createSimulator(root: HTMLElement) {
   }
 
   function clearAll() {
+    if (life.population()) beforeEdit();
     life.clear();
     resetHistory();
     setRunning(false);
@@ -313,12 +331,56 @@ export function createSimulator(root: HTMLElement) {
     setRunning(false);
   }
 
+  function stepBack() {
+    const prev = past.pop();
+    if (!prev || prev.cells.length !== life.cells.length) {
+      toast(speed > 60 ? 'Turbo speed keeps no history to step back through' : 'Nothing earlier to go back to');
+      return;
+    }
+    setRunning(false);
+    life.restore(prev.cells, prev.gen);
+    pop.pop(); births.pop(); deaths.pop(); hashes.pop();
+    status = '';
+    syncHistoryButtons();
+  }
+
+  /** Call before any change you make by hand, so it can be undone. */
+  function beforeEdit() {
+    undoStack.push({ cells: life.snapshot(), gen: life.generation });
+    if (undoStack.length > 50) undoStack.shift();
+    redoStack = [];
+    past = [];
+    syncHistoryButtons();
+  }
+  function swapTo(from: Snap[], to: Snap[]) {
+    const snap = from.pop();
+    if (!snap || snap.cells.length !== life.cells.length) return;
+    to.push({ cells: life.snapshot(), gen: life.generation });
+    setRunning(false);
+    life.restore(snap.cells, snap.gen);
+    resetHistory();
+    past = [];
+    syncHistoryButtons();
+  }
+  const undo = () => swapTo(undoStack, redoStack);
+  const redo = () => swapTo(redoStack, undoStack);
+  function syncHistoryButtons() {
+    backBtn.disabled = !past.length;
+    undoBtn.disabled = !undoStack.length;
+    redoBtn.disabled = !redoStack.length;
+  }
+
   function stepOnce() {
     setRunning(false);
     doStep();
   }
 
   function doStep() {
+    // Copying the board every step is cheap at normal speeds; in turbo there is no going back.
+    if (speed <= 60) {
+      past.push({ cells: life.snapshot(), gen: life.generation });
+      if (past.length > pastLimit()) past.shift();
+    } else past = [];
     const s = life.step();
     lastStepAt = performance.now();
     pop.push(s.population);
@@ -477,6 +539,7 @@ export function createSimulator(root: HTMLElement) {
 
   on('sim:load', ({ cells, name, rule }) => {
     if (rule) setRule(rule);
+    beforeEdit();
     life.clear();
     resetHistory();
     const b = bounds(cells)!;
@@ -519,12 +582,14 @@ export function createSimulator(root: HTMLElement) {
     }
     const [wx, wy] = screenToWorld(p.x, p.y).map(Math.floor) as [number, number];
     if (stamp) {
+      beforeEdit();
       for (const [x, y] of stampCells()) life.set(wx + x, wy + y, 1);
       seedName = life.population() === stamp.cells.length ? stamp.name : 'Your pattern';
       if (!e.shiftKey) endStamp();
       return;
     }
     const value = tool === 'erase' ? 0 : life.get(wx, wy) ? 0 : 1;
+    beforeEdit();
     painting = { value, last: [wx, wy] };
     seedName = 'Your pattern';
     life.set(wx, wy, value);
@@ -581,6 +646,15 @@ export function createSimulator(root: HTMLElement) {
     const tgt = e.target as HTMLElement;
     if (tgt && ['INPUT', 'TEXTAREA', 'SELECT'].includes(tgt.tagName)) return;
     const k = e.key.toLowerCase();
+    if ((e.ctrlKey || e.metaKey) && k === 'z') {
+      e.preventDefault();
+      if (e.shiftKey) redo(); else undo();
+      return;
+    }
+    if ((e.ctrlKey || e.metaKey) && k === 'y') { e.preventDefault(); redo(); return; }
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (k === 'arrowleft' || k === 'b') { e.preventDefault(); stepBack(); return; }
+    if (k === 'arrowright') { e.preventDefault(); stepOnce(); return; }
     if (k === ' ') {
       e.preventDefault();
       setRunning(!running);
@@ -641,6 +715,7 @@ export function createSimulator(root: HTMLElement) {
     draw();
     if (now - lastStats > 120) {
       lastStats = now;
+      syncHistoryButtons();
       updateStats();
     }
   }

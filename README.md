@@ -59,7 +59,7 @@ flowchart LR
 <!-- progress:start -->
 ![Progress by area](docs/media/progress.svg)
 
-**32 of 42 roadmap items done (76%).** Generated from the checklist below by `npm run progress`.
+**33 of 43 roadmap items done (77%).** Generated from the checklist below by `npm run progress`.
 
 | Area | Progress | Done | Up next |
 | --- | --- | --- | --- |
@@ -68,7 +68,7 @@ flowchart LR
 | Math | ▰▰▰▰▰▰▰▰▰▱ 89% | 8 / 9 | Glider synthesis: building patterns from colliding gliders |
 | Applications | ▰▰▰▰▰▰▰▰▱▱ 75% | 3 / 4 | Neural cellular automata that regrow an image |
 | Games and labs | ▰▰▰▰▰▰▰▰▱▱ 75% | 3 / 4 | A daily puzzle |
-| Apps and publishing | ▰▰▰▰▰▰▰▱▱▱ 73% | 8 / 11 | Intel Mac build; Code-signed installers |
+| Apps and publishing | ▰▰▰▰▰▰▰▰▱▱ 75% | 9 / 12 | Intel Mac build; Code-signed installers |
 <!-- progress:end -->
 
 ### Releases
@@ -85,6 +85,7 @@ timeline
   v7 : Ancestors, running time backwards
   v7.1 : Web app, desktop apps, animated README
   v8 : Common Room redesign, home page, light and dark modes
+  v8.1 : Step back and undo, puzzle play, one voice for figures
 ```
 
 Full details in [CHANGELOG.md](CHANGELOG.md).
@@ -144,6 +145,7 @@ Tick a box here and run `npm run progress` to redraw the bars above. CI fails if
 - [x] Animated README with GIFs and diagrams
 - [x] Progress tracker in the README
 - [x] Common Room redesign: a Go-board look with light and dark modes, and a home page
+- [x] Step back in time and undo on the board; keyboard play and best scores in puzzles
 - [ ] Intel Mac build
 - [ ] Code-signed installers
 - [ ] Automatic updates in the desktop app
@@ -157,6 +159,7 @@ Tick a box here and run `npm run progress` to redraw the bars above. CI fails if
 
 - **Go board renderer.** One GPU (graphics processing unit) thread works out each pixel. Lines run through the cell centres and star points sit every six lines. Stones are shaded and cast a small shadow. A newborn stone drops in on a spring, and a stone that dies lifts off and fades, at speeds slow enough to see it. You can colour the stones by turn, by age (white to black) or all slate. A plain canvas renderer takes over when WebGL2 isn't available.
 - **Draw, erase, pan and zoom** with a mouse, trackpad or touch screen (pinch to zoom). A cleared board tells you how to get started again.
+- **Step back in time** one generation at a time (the last few hundred generations are kept, depending on the board size), and **undo or redo** any drawing, stamp, clear or random soup.
 - **Pattern library** of 27 classics: still lifes, oscillators, spaceships, methuselahs, guns and infinite growth. Rotate with R and flip with F before you place one.
 - **12 rule presets**, including Life, HighLife, Day & Night, Seeds, Maze, Replicator and Anneal, or type any `B/S` rule (the neighbour counts that cause a **B**irth and let a cell **S**urvive).
 - Wrapped or bounded worlds from 64 to 1,024 lines across, plus random and symmetric soups.
@@ -203,7 +206,7 @@ A genetic algorithm, running in a Web Worker, breeds one-dimensional radius-3 ru
 ![A genetic algorithm evolving a density classifier](docs/media/evolve.gif)
 
 ### Puzzles
-Ten construction challenges, from "draw a still life" to "draw a period-3 oscillator" and "make a pattern that vanishes after at least 100 generations". Draw on a small grid, press **Check**, and the engine runs your pattern and decides. A wrong answer is told what its pattern actually does (for example "That pattern dies out after 4 generations"), and **Watch it run** plays it in place. Progress and drafts are saved in the browser.
+Ten construction challenges, from "draw a still life" to "draw a period-3 oscillator" and "make a pattern that vanishes after at least 100 generations". Place stones on a small Go board, press **Check**, and the engine runs your pattern and decides. A wrong answer is told what its pattern actually does (for example "That pattern dies out after 4 generations"), and **Watch it run** plays it in place, with black and white stones taking turns as on the main board. Each puzzle remembers the fewest stones you've solved it with, so there's a reason to go back. You can play entirely from the keyboard (arrows, Space, Enter), and undo or redo any move. Progress, drafts and best scores are saved in the browser.
 
 ![Puzzles](docs/screenshots/puzzles.png)
 
@@ -280,7 +283,9 @@ The site opens on the home page, and the top bar lists all eleven views. Your ch
 | Key | Action |
 | --- | --- |
 | Space | Play / pause |
-| N or . | Step one generation |
+| N, . or → | Step one generation |
+| B or ← | Step back one generation |
+| Ctrl+Z / Ctrl+Shift+Z | Undo / redo an edit (Cmd on a Mac) |
 | R | Reset to the last start (or rotate a pattern you're placing) |
 | F | Flip the pattern you're placing |
 | D / E / H | Draw / erase / pan tool |
@@ -291,6 +296,8 @@ The site opens on the home page, and the top bar lists all eleven views. Your ch
 Right- or middle-drag pans with any tool, and Shift-click places a pattern again and again.
 
 On the home page's board, the arrow keys move a cursor, Space places or lifts a stone and P plays or pauses. The cursor position is read out in Go coordinates, like K10.
+
+On a puzzle board, the arrow keys move a cursor, Space places or lifts a stone, Enter checks your answer, W watches it run and Ctrl+Z undoes.
 
 ## How it works
 

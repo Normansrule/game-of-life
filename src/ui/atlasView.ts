@@ -102,7 +102,7 @@ export function createAtlasView(root: HTMLElement) {
       const spark = h('canvas.atlas-spark');
       const el = h('article.atlas-card', { title: 'Open in the simulator', onclick: () => open(rule, name) },
         canvas,
-        h('div.atlas-head', {}, h('b.mono', {}, rule), badge),
+        h('div.atlas-head', {}, h('code', {}, rule), badge),
         name ? h('div.atlas-name', {}, name) : h('div.atlas-name.dim', {}, ' '),
         meta, spark);
       const run = new RuleRun(rule, SIZE, 0.5, seed);

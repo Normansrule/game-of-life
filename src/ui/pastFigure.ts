@@ -28,7 +28,7 @@ function drawWindow(canvas: HTMLCanvasElement, m: number) {
 
 export function createPastFigure() {
   const chart = h('canvas.chart.tall');
-  const status = h('span.mono', {}, 'Waiting to start…');
+  const status = h('span.readout', {}, 'Waiting to start…');
   const extremes = h('div.past-extremes');
   const stats = h('div.past-stats');
   let started = false;
@@ -58,7 +58,7 @@ export function createPastFigure() {
     const card = (m: number) => {
       const c = h('canvas.past-win');
       requestAnimationFrame(() => drawWindow(c, m));
-      return h('div.past-card', {}, c, h('b.mono', {}, counts[m].toLocaleString()), h('span.small.dim', {}, `${((counts[m] / TOTAL) * 100).toFixed(m === 0 ? 1 : 3)}%`));
+      return h('div.past-card', {}, c, h('b.readout', {}, counts[m].toLocaleString()), h('span.small.dim', {}, `${((counts[m] / TOTAL) * 100).toFixed(m === 0 ? 1 : 3)}%`));
     };
     extremes.replaceChildren(
       h('div', {}, h('h4', {}, 'Most pasts'), h('div.past-row', {}, ...order.slice(0, 4).map(card))),

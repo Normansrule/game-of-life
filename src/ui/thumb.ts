@@ -92,3 +92,25 @@ export function drawThumb(canvas: HTMLCanvasElement, cells: Cell[], color: strin
   for (const [x, y] of cells) p.add(ox + (x - b.x0) * s, oy + (y - b.y0) * s);
   p.fill(ctx, color, bg !== 'transparent');
 }
+
+/**
+ * Star points (hoshi) on a small finite board of w × h points whose cell (0, 0)
+ * has its top-left corner at (ox, oy): on the third line in from each edge,
+ * plus the centre when the board has one, as on a 9×9 or 13×13 Go board.
+ */
+export function drawStarPoints(ctx: CanvasRenderingContext2D, w: number, h: number, s: number, ox: number, oy: number): void {
+  if (s < STONE_MIN || w < 7 || h < 7) return;
+  const line = (n: number) => (n >= 13 ? 3 : 2);
+  const xs = [line(w), w - 1 - line(w)], ys = [line(h), h - 1 - line(h)];
+  const pts: [number, number][] = [];
+  for (const x of xs) for (const y of ys) pts.push([x, y]);
+  if (w % 2 && h % 2) pts.push([(w - 1) / 2, (h - 1) / 2]);
+  ctx.fillStyle = alpha('--board-line', 0.75);
+  ctx.beginPath();
+  const r = Math.max(1.5, s * 0.09);
+  for (const [x, y] of pts) {
+    ctx.moveTo(ox + (x + 0.5) * s + r, oy + (y + 0.5) * s);
+    ctx.arc(ox + (x + 0.5) * s, oy + (y + 0.5) * s, r, 0, Math.PI * 2);
+  }
+  ctx.fill();
+}

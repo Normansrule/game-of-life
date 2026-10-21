@@ -30,7 +30,7 @@ export function sandpileDemo(): Demo {
   const sizes: number[] = [];
   const flash = new Float32Array(W * H);
   const chart = h('canvas.chart.small');
-  const label = h('span.mono');
+  const label = h('span.readout');
   // 0 to 3 grains on the sequential map (slate is empty); a toppling site flashes vermilion.
   const pal = themed(() => ({ levels: sandpileLevels(), flash: rgb('--data-shu') }));
   const reset = () => {
@@ -111,7 +111,7 @@ export function fluidDemo(): Demo {
   let force = 0.002;
   const ux = new Float32Array(BW * BH), uy = new Float32Array(BW * BH), rho = new Float32Array(BW * BH);
   const ax = new Float32Array(BW * BH), ay = new Float32Array(BW * BH);
-  const label = h('span.mono');
+  const label = h('span.readout');
   // Speed on the sequential map (slate is still); vorticity diverging pine (clockwise)
   // through the board to vermilion (anticlockwise). The obstacle is a white stone.
   const pal = themed(() => ({ seq: lut(sequential()), div: lut(diverging()), solid: rgb('--shell'), arrowsLight: alpha('--shell', 0.7), arrowsDark: alpha('--slate', 0.6) }));
@@ -236,7 +236,7 @@ export function predatorPreyDemo(): Demo {
   const fH: number[] = [], sH: number[] = [];
   const chart = h('canvas.chart.small');
   const phase = h('canvas.chart.small');
-  const label = h('span.mono');
+  const label = h('span.readout');
   const pal = themed(() => ({ sea: catGround(), fish: rgb('--data-pine'), shark: rgb('--data-shu') }));
   const reset = () => {
     sea = new Wator(W, H, params);
@@ -293,7 +293,7 @@ export function heartDemo(): Demo {
   let t = 0;
   const ecg: number[] = [];
   const chart = h('canvas.chart.small');
-  const status = h('span.mono');
+  const status = h('span.readout');
   // Resting tissue is slate, a firing cell clamshell white, and refractory cells
   // vermilion fading back to slate as they recover.
   const pal = themed(() => {
@@ -381,7 +381,7 @@ export function snowflakeDemo(): Demo {
       if (Math.abs(rq) > N || Math.abs(rr) > N || Math.abs(rq + rr) > N) continue;
       map[Y * CW + X] = flake.idx(rq, rr);
     }
-  const label = h('span.mono');
+  const label = h('span.readout');
   const betaCtl = slider('Vapour β', 0.3, 0.95, 0.01, beta, (v) => { beta = v; restart(); }, (v) => v.toFixed(2));
   const gammaCtl = slider('Addition γ', 0, 0.005, 0.0001, gamma, (v) => { gamma = v; restart(); }, (v) => v.toFixed(4));
   const restart = () => {

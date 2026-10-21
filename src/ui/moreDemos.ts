@@ -23,7 +23,7 @@ export function leniaDemo(): Demo {
   const world = new Lenia(W, H, { ...ORBIUM });
   const mass: number[] = [];
   const chart = h('canvas.chart.small');
-  const label = h('span.mono');
+  const label = h('span.readout');
   const reset = () => {
     world.A.fill(0);
     // Same orientation means same velocity, so these two never collide.
@@ -67,7 +67,7 @@ export function schellingDemo(): Demo {
   let threshold = 0.34;
   const seg: number[] = [], unhappy: number[] = [];
   const chart = h('canvas.chart.small');
-  const label = h('span.mono');
+  const label = h('span.readout');
   // Two groups in indigo and ochre; an unhappy agent is drawn faded towards the ground.
   const pal = themed(() => {
     const ground = catGround(), a = rgb('--data-indigo'), b = rgb('--data-ochre');
@@ -144,7 +144,7 @@ export function ringRoadDemo(): Demo {
   const rows: Uint8Array[] = [];
   const speeds: number[] = [];
   const chart = h('canvas.chart.small');
-  const label = h('span.mono');
+  const label = h('span.readout');
   const reset = () => {
     road = new NaSch(L, cars, 5, pBrake);
     rows.length = 0;
@@ -195,7 +195,7 @@ export function ringRoadDemo(): Demo {
     rctx.font = `650 24px ${tok('--ui')}`;
     rctx.textAlign = 'center';
     rctx.fillText(`${road.cars} cars`, cx, cy - 8);
-    rctx.font = `18px ${tok('--mono')}`;
+    rctx.font = `500 18px ${tok('--ui')}`;
     rctx.fillText(`speed ${road.meanSpeed().toFixed(2)} / 5`, cx, cy + 20);
     if (frame % 15 === 1) drawChart(chart, [{ values: speeds, color: '--ink', label: 'mean speed', width: 1.5 }], { yMin: 0, yMax: 5, legend: true });
     const stopped = [...road.vel].filter((v) => v === 0).length;

@@ -82,7 +82,7 @@ export function drawChart(canvas: HTMLCanvasElement, series: Series[], o: ChartO
   ctx.strokeStyle = gridColor;
   ctx.lineWidth = 1;
   // Y ticks
-  const yt = o.logY ? logTicks(yMin, yMax) : niceTicks(yMin, yMax, Math.max(2, Math.floor(ph / 32)));
+  const yt = o.logY ? logTicks(yMin, yMax) : niceTicks(yMin, yMax, Math.max(2, Math.min(5, Math.floor(ph / 40))));
   ctx.textAlign = 'right';
   ctx.textBaseline = 'middle';
   for (const v of yt) {
@@ -158,16 +158,37 @@ export function drawChart(canvas: HTMLCanvasElement, series: Series[], o: ChartO
   ctx.restore();
 
   if (o.legend) {
+    const named = series.filter((s) => s.label);
     let x = padL;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    for (const s of series) {
-      if (!s.label) continue;
-      ctx.fillStyle = seriesColor(s);
-      ctx.fillRect(x, 8, 10, 3);
+    // One series needs no key: its name is the chart's caption.
+    if (named.length === 1) {
       ctx.fillStyle = textColor;
-      ctx.fillText(s.label, x + 14, 10);
-      x += ctx.measureText(s.label).width + 30;
+      ctx.fillText(named[0].label!, x, 10);
+    } else {
+      for (const s of named) {
+        // Each swatch is the mark it explains, drawn small: same colour, width and dash.
+        const col = seriesColor(s);
+        if (s.width === 0 || (s.dots && !s.width)) {
+          ctx.fillStyle = col;
+          ctx.beginPath();
+          ctx.arc(x + 6, 10, 2.6, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          ctx.strokeStyle = col;
+          ctx.lineWidth = Math.max(1.5, s.width ?? 1.6);
+          ctx.setLineDash(s.dash ?? []);
+          ctx.beginPath();
+          ctx.moveTo(x, 10);
+          ctx.lineTo(x + 14, 10);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+        ctx.fillStyle = textColor;
+        ctx.fillText(s.label!, x + 19, 10);
+        x += ctx.measureText(s.label!).width + 34;
+      }
     }
   }
 }

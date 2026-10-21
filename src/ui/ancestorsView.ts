@@ -10,7 +10,7 @@ import { emit } from './bus';
 import { fitCanvas, h } from './dom';
 import { icon } from './icons';
 import { onTheme, tok } from './theme';
-import { CellPainter, drawBoardLines, drawThumb } from './thumb';
+import { CellPainter, drawBoardLines, drawStarPoints, drawThumb } from './thumb';
 
 const GW = 12, GH = 12;
 const SHOW = 10;
@@ -46,7 +46,7 @@ export function createAncestorsView(root: HTMLElement) {
   lines.classList.add('anc-lines');
   const cols = h('div.anc-cols');
   treeWrap.append(lines, cols);
-  const status = h('span.mono.dim');
+  const status = h('span.readout.dim');
   const findBtn = h('button.primary', { onclick: () => start() }, icon('rewind'), 'Find parents');
   const rewindBtn = h('button', { onclick: () => rewind(5), title: 'Go back five generations, taking the smallest parent each time' }, 'Rewind 5 steps');
   const marginSel = h('select', { onchange: (e: Event) => { margin = +(e.target as HTMLSelectElement).value; } },
@@ -90,6 +90,7 @@ export function createAncestorsView(root: HTMLElement) {
     ctx.fillStyle = tok('--board');
     ctx.fillRect(0, 0, W, H);
     drawBoardLines(ctx, GW * s, GH * s, s, 0, 0);
+    drawStarPoints(ctx, GW, GH, s, 0, 0);
     const p = new CellPainter(s);
     for (const [x, y] of current()) p.add(x * s, y * s);
     p.fill(ctx, '--slate');

@@ -30,7 +30,7 @@ export function createBoxFigures() {
   let started = false;
   let t0 = 0;
 
-  const status = h('span.mono', {}, 'Waiting to start: scroll here or press Run.');
+  const status = h('span.readout', {}, 'Waiting to start: scroll here or press Run.');
   const bar = h('div.box-bar');
   const legend = h('div.box-legend');
   const byCells = h('canvas.chart.tall');
@@ -131,7 +131,7 @@ export function createBoxFigures() {
       h('span', { style: `width:${(counts.get(o)! / denom) * 100}%;background:${outcomeVar(o)}`, title: `${OUTCOME_INFO[o].label}: ${counts.get(o)}` })));
     legend.replaceChildren(...OUTCOMES.filter((o) => o !== 'unsettled' || counts.get(o)).map((o) =>
       h('div', {}, h('span.cls-dot', { style: `background:${outcomeVar(o)}` }), `${OUTCOME_INFO[o].label} `,
-        h('b.mono', {}, counts.get(o)!.toLocaleString()),
+        h('b.readout', {}, counts.get(o)!.toLocaleString()),
         h('span.dim', {}, records.length ? ` (${((counts.get(o)! / records.length) * 100).toFixed(1)}%)` : ''))));
     drawByCells();
     drawLifespans();
