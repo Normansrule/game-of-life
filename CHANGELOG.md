@@ -1,5 +1,13 @@
 # Changelog
 
+## 8.2.0
+
+- **The home page is a scroll story on a 3D Go board.** A kaya board with lit, lens-shaped slate and clamshell stones stays pinned while four chapters scroll past. Five stones drop into place, the rule runs generation by generation, and then every generation is stacked into a tower the camera circles. The scroll position drives everything, so scrolling up runs it backwards. With a mouse, a warm light follows the pointer across the board and lifts the stones under it. Reduced motion holds the camera still for each chapter, and browsers without WebGL2 get the chapters as plain paragraphs.
+- **The whole rule, on nine points**: a toy where you tap the eight neighbours and the middle point. The next turn shows what happens to the middle, whether it is born, stays, dies of loneliness or is crowded out, with a short animation for each.
+- **Life in four numbers**, which count up the first time they come into view, and **view cards** whose small boards play their pattern while you point at or focus them.
+- The playable home board is now its own section, "Your turn".
+- Moving between views cross-fades the page where the browser supports view transitions. The top bar is translucent over the page.
+
 ## 8.1.0
 
 - **The board can step back in time.** B or ← goes back one generation, through the last few hundred (fewer on very large boards; turbo speed keeps none). **Undo and redo** (Ctrl+Z, Ctrl+Shift+Z, or the new toolbar buttons) cover drawing, stamping, clearing, random soups and loaded patterns.

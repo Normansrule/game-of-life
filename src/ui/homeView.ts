@@ -1,16 +1,19 @@
 /**
  * The home page, which is also the website on GitHub Pages.
  *
- * Its centrepiece is a real 19-line Go board. It places a famous pattern stone
- * by stone, runs it, lifts the stones into the lid and moves on to the next.
+ * It opens on a scroll story told on a 3D Go board (homeStory.ts). Below it
+ * is a real 19-line board you can play on: it places a famous pattern stone by
+ * stone, runs it, lifts the stones into the lid and moves on to the next.
  * Touch the board and it's yours: place stones, run them, or send them to the
- * full simulator.
+ * full simulator. The rule toy, numbers and view cards are in homeSections.ts.
  */
 import { type Cell, bounds, normalize } from '../engine/life';
 import { getPattern, patternCells } from '../engine/patterns';
 import { emit } from './bus';
 import { h } from './dom';
 import { isInstalledApp, openGetApp } from './getApp';
+import { createStory } from './homeStory';
+import { numberBand, ruleToy, viewCards } from './homeSections';
 import { icon } from './icons';
 import { onTheme, reducedMotion, tok } from './theme';
 
@@ -43,12 +46,13 @@ export function createHomeView(root: HTMLElement) {
   const lidEl = h('dd', {}, '0');
   const caption = h('p.board-caption', { id: 'home-caption', 'aria-live': 'polite' });
 
-  const sendBtn = h('button.primary', { type: 'button', onclick: () => openOnBoard() }, 'Open the board', icon('arrow'));
-  const hero = h('div.hero', {},
-    h('div', {},
-      h('h1', {}, 'Life began on a Go board.'),
-      h('p.lede', {}, 'In 1970 John Conway and his students in Cambridge worked out the Game of Life by hand, with stones on a Go board. Life Tree gives you that board, then lets you follow every stone forward, backward and into the math behind it.'),
-      h('div.actions', {}, sendBtn, h('a.cta-link', { href: '#math' }, 'How the rules work'))),
+  const story = createStory({ onOpenBoard: () => openOnBoard() });
+  const sendBtn = h('button', { type: 'button', onclick: () => openOnBoard() }, 'Open on the big board', icon('arrow'));
+  const hero = h('section.home-section.yours', { 'aria-labelledby': 'h-yours' },
+    h('div.yours-text', {},
+      h('h2', { id: 'h-yours' }, 'Your turn'),
+      h('p.intro', {}, 'A 19-line board that plays a few famous patterns on its own. Touch it, or press a key, and it is yours: tap to place or lift stones, then play them. Positions are read out in Go coordinates.'),
+      h('div.actions', {}, sendBtn)),
     h('div.home-board', {},
       canvas,
       h('div.board-bar', {},
@@ -60,29 +64,7 @@ export function createHomeView(root: HTMLElement) {
       caption));
 
   // ---------- the rest of the page ----------
-  const view = (route: string, name: string, what: string) =>
-    h('li', {}, h('a', { href: `#${route}` }, h('b', {}, name), h('span', {}, what), icon('arrow')));
-  const group = (title: string, ...items: HTMLElement[]) => h('div.view-group', {}, h('h3', {}, title), h('ul', {}, ...items));
-
-  const views = h('section.home-section', { 'aria-labelledby': 'h-views' },
-    h('h2', { id: 'h-views' }, 'Eleven ways to read one board'),
-    h('p.intro', {}, 'Every view starts from the same board. Draw something once, then follow it forward in time, backward to its possible parents, across other rules, or into the maths behind it.'),
-    h('div.view-groups', {},
-      group('Watch it run',
-        view('sim', 'Board', 'Draw, run and record patterns on a board up to 1,024 lines wide.'),
-        view('space', 'Spacetime', 'Stack the generations into a 3D sculpture you can turn.'),
-        view('deep', 'Deep time', 'Jump up to 2^50 generations ahead with the Hashlife algorithm.')),
-      group('Trace where it came from',
-        view('lineage', 'Lineage', 'A family tree of every object: which ones split, merged and died.'),
-        view('ancestors', 'Ancestors', 'Run the board backwards to find what could have come before.'),
-        view('basins', 'State space', 'Map every state of a small board to where it ends up.')),
-      group('Try other rules',
-        view('atlas', 'Rule atlas', 'Eighteen of the 262,144 Life-like rules running side by side, sorted by behaviour.'),
-        view('evolve', 'Evolution', 'Breed rules with a genetic algorithm and watch them get better at a task.'),
-        view('puzzles', 'Puzzles', 'Ten challenges, from a still life to a spaceship, checked by the engine.')),
-      group('Understand it',
-        view('math', 'Math', 'Nineteen sections, from the rules themselves to running time backwards.'),
-        view('apps', 'Applications', 'Live models of traffic, heart rhythms, snowflakes and more.'))));
+  const views = viewCards().el;
 
   const history = h('section.home-section', { 'aria-labelledby': 'h-history' },
     h('h2', { id: 'h-history' }, 'Where it started'),
@@ -101,7 +83,7 @@ export function createHomeView(root: HTMLElement) {
     h('span', {}, 'Open source under the MIT License. ', h('a', { href: 'https://github.com/Normansrule/game-of-life', target: '_blank', rel: 'noopener' }, 'Source on GitHub')),
     h('span', {}, 'Rendered with WebGL2 (Web Graphics Library), with a plain canvas fallback.'));
 
-  root.append(h('div.home', {}, hero, views, history, install, foot));
+  root.append(story.el, h('div.home', {}, hero, ruleToy(), numberBand(), views, history, install, foot));
 
   // ---------- board state ----------
   let alive = new Uint8Array(N * N);
@@ -337,7 +319,7 @@ export function createHomeView(root: HTMLElement) {
   if (reducedMotion()) setPlaying(false);
 
   return {
-    activate() { active = true; document.title = "Life Tree: Conway's Game of Life on a Go board"; kick(); },
-    deactivate() { active = false; },
+    activate() { active = true; story.activate(); document.title = "Life Tree: Conway's Game of Life on a Go board"; kick(); },
+    deactivate() { active = false; story.deactivate(); },
   };
 }

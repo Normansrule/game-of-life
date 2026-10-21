@@ -70,6 +70,13 @@ function ensure(route: string) {
 function show(route: string) {
   if (!routes[route]) route = 'home';
   if (route === current) return;
+  // Changing views cross-fades where the browser supports it (see ::view-transition in style.css).
+  const doc = document as Document & { startViewTransition?: (f: () => void) => unknown };
+  if (current && doc.startViewTransition && !reducedMotion() && !document.hidden) doc.startViewTransition(() => swap(route));
+  else swap(route);
+}
+
+function swap(route: string) {
   views.get(current)?.view.deactivate();
   for (const [k, v] of views) v.el.hidden = k !== route;
   const v = ensure(route);
