@@ -11,10 +11,11 @@ In 1970 John Conway and his students worked out the Game of Life by hand, with s
 
 It's a static site written in TypeScript and built with Vite. Everything runs in your browser: there's no server and no account. It also installs as an offline app, and there's a desktop app built from the same code.
 
-![The home page: a Go board placing the R-pentomino stone by stone and running it](docs/media/home.gif)
+![The home page: scrolling drops five stones onto a 3D Go board, runs them, and stacks every generation into a tower](docs/media/home.gif)
 
 ## Key features
 
+- **A story you scroll.** The website opens on a Go board in 3D. As you scroll, five stones drop onto it, the rule runs generation by generation, and then every generation is stacked into a tower you see from the side. Scroll back and it runs backwards.
 - **A real board.** The simulator draws the grid as a Go board. Cells sit on the intersections as slate and clamshell stones, and each generation's births alternate black and white like turns, so you can see how old a pattern is. Zoom out and the stones become flat cells, which keeps a 1,024 × 1,024 board fast. It renders with WebGL2 (Web Graphics Library 2) and falls back to a plain canvas.
 - **Lineage tree.** A family tree of every object in a pattern, laid out upward, radially or as a timeline.
 - **Ancestors.** Runs the board backwards to find every pattern that could have produced yours one generation earlier.
@@ -59,7 +60,7 @@ flowchart LR
 <!-- progress:start -->
 ![Progress by area](docs/media/progress.svg)
 
-**33 of 43 roadmap items done (77%).** Generated from the checklist below by `npm run progress`.
+**34 of 44 roadmap items done (77%).** Generated from the checklist below by `npm run progress`.
 
 | Area | Progress | Done | Up next |
 | --- | --- | --- | --- |
@@ -68,7 +69,7 @@ flowchart LR
 | Math | ▰▰▰▰▰▰▰▰▰▱ 89% | 8 / 9 | Glider synthesis: building patterns from colliding gliders |
 | Applications | ▰▰▰▰▰▰▰▰▱▱ 75% | 3 / 4 | Neural cellular automata that regrow an image |
 | Games and labs | ▰▰▰▰▰▰▰▰▱▱ 75% | 3 / 4 | A daily puzzle |
-| Apps and publishing | ▰▰▰▰▰▰▰▰▱▱ 75% | 9 / 12 | Intel Mac build; Code-signed installers |
+| Apps and publishing | ▰▰▰▰▰▰▰▰▱▱ 77% | 10 / 13 | Intel Mac build; Code-signed installers |
 <!-- progress:end -->
 
 ### Releases
@@ -86,6 +87,7 @@ timeline
   v7.1 : Web app, desktop apps, animated README
   v8 : Common Room redesign, home page, light and dark modes
   v8.1 : Step back and undo, puzzle play, one voice for figures
+  v8.2 : A scroll story on a 3D Go board, a rule toy, live view cards
 ```
 
 Full details in [CHANGELOG.md](CHANGELOG.md).
@@ -146,6 +148,7 @@ Tick a box here and run `npm run progress` to redraw the bars above. CI fails if
 - [x] Progress tracker in the README
 - [x] Common Room redesign: a Go-board look with light and dark modes, and a home page
 - [x] Step back in time and undo on the board; keyboard play and best scores in puzzles
+- [x] A scroll story on a 3D Go board for the home page, with a rule toy and live view cards
 - [ ] Intel Mac build
 - [ ] Code-signed installers
 - [ ] Automatic updates in the desktop app
@@ -388,8 +391,11 @@ src/
     renderer.ts    the Go board shader (WebGL2) and its Canvas 2D fallback
     palettes.ts    stone colourings: turns, age, slate
     spacetime.ts   instanced 3D spacetime renderer
+    board3d.ts     the 3D Go board and lens-shaped stones for the home page story
   ui/
     homeView.ts    the home page and its live 19-line board
+    homeStory.ts   the scroll story at the top of the home page
+    homeSections.ts  the rule toy, the numbers and the view cards
     theme.ts       colour modes, and design tokens for canvas code
     icons.ts       the icon set (inline SVG on a 24-unit grid)
     ...            the other ten views, charts, demos and small DOM helpers
@@ -407,11 +413,13 @@ The design is called **Common Room**, after the Cambridge maths common room wher
 
 **Colour.** The page is planed kaya, the pale yellow wood Go boards are made from, and every board in the app is a deeper kaya (`#D9A957`). Slate (`#1E1D1C`) and clamshell (`#F6F2E7`) stones carry all the contrast. There's no accent colour at all, because the things you press are stones: a primary button is a slate pill, a switch is a stone sliding in a groove, and the active tab is marked by a star point. Charts and categories use a small set of earthy data colours (pine, vermilion, indigo, ochre, plum) that stay separate from the stones. In **Lamplight** (dark mode) the page turns to walnut and the board looks lamp-lit, so the stones still read the same.
 
-**Type.** Headings are set in [Bricolage Grotesque](https://github.com/ateliertriay/bricolage), narrow and heavy, and the same family runs the controls. Reading text, from the math to the application write-ups, is [Literata](https://github.com/googlefonts/literata), a book face drawn for long reading on screens. Code and counters are monospace. Both fonts are bundled with the app, so the offline and desktop versions look the same as the website.
+**Type.** Headings are set in [Bricolage Grotesque](https://github.com/ateliertriay/bricolage), narrow and heavy, and the same family runs the controls. Reading text, from the math to the application write-ups, is [Literata](https://github.com/googlefonts/literata), a book face drawn for long reading on screens. Monospace is kept for code: rule strings, RLE and error text. Live numbers use the interface face with figures that line up. Both fonts are bundled with the app, so the offline and desktop versions look the same as the website.
 
 **Layout.** One board line (24 px) is the unit, and spacing goes in quarter, half, one, two and four lines. Sections start on a star point, the dot you'll see before panel and section headings. Panels are separated by thin rules rather than boxed in cards, and long reading text is capped at about 66 characters a line.
 
-**Motion.** Things that land use a spring. Placed stones, the star point under the tabs, the switches and the toasts all settle with a small overshoot, like a stone clicking onto the board. State changes use one strong ease-out and stay under 300 ms. Presses scale to 97%. Hover effects only apply to a mouse or trackpad. With reduced motion turned on, overshoot, movement and loops are switched off and fades remain.
+**The home page.** The website opens with a scroll story, the way a product page does. A 3D board stays pinned while four chapters pass: the title, five stones dropping onto the board, the rule running, and every generation stacked into a tower. Your scroll position drives it all, so it goes backwards when you scroll up, and nothing plays on its own except a slow drift of the camera. With a mouse, a warm light follows the pointer across the wood and lifts the stones under it. Below the story are a board you can play on, a toy that shows the whole rule on nine points, four numbers that count up once, and a card for every view whose small board plays while you point at it. Without WebGL2 the story becomes ordinary paragraphs.
+
+**Motion.** Things that land use a spring. Moving between views cross-fades the page and lifts the new one a few pixels, where the browser supports view transitions. Placed stones, the star point under the tabs, the switches and the toasts all settle with a small overshoot, like a stone clicking onto the board. State changes use one strong ease-out and stay under 300 ms. Presses scale to 97%. Hover effects only apply to a mouse or trackpad. With reduced motion turned on, overshoot, movement and loops are switched off and fades remain: the home page camera holds one still view per chapter and stones appear without falling.
 
 **States.** A cleared board says what to do next and offers a random soup or a glider. A view that fails to start shows what happened and a reload button, and the rest of the app keeps working. Searches and long runs show three stones being placed in turn while they work.
 
