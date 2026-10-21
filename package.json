@@ -1,6 +1,6 @@
 {
   "name": "game-of-life",
-  "version": "7.1.0",
+  "version": "8.0.0",
   "private": true,
   "description": "Conway's Game of Life explorer with a lineage tree, basin-of-attraction trees, the math behind it, and real-world applications.",
   "type": "module",

@@ -1,7 +1,7 @@
 {
   "name": "life-tree-desktop",
   "productName": "Life Tree",
-  "version": "7.1.0",
+  "version": "8.0.0",
   "description": "Conway's Game of Life explorer: lineage trees, the math behind it and real-world applications.",
   "main": "main.cjs",
   "author": "Normansrule",

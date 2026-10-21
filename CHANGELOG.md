@@ -1,7 +1,13 @@
 # Changelog
 
-## Unreleased
+## 8.0.0
 
+- **Common Room redesign**: the app and website now look like the Go board Conway first played Life on. Kaya-wood board, slate and clamshell stones, Bricolage Grotesque and Literata (self-hosted), a 24px spacing unit and spring motion that switches off under reduced motion.
+- **Daylight and Lamplight modes** that follow the system until you pick one. Canvases and charts read the same design tokens and repaint when the mode changes.
+- **Home page**, also the GitHub Pages site: a live 19×19 board that places and runs the R-pentomino, a glider, a pulsar and an acorn, and hands itself over on first touch or key press.
+- **The board** is drawn as a Go board in WebGL: stones on line crossings, star points, stones that spring down when born and lift away when they die.
+- Empty, loading and error states for every view; one crashing view no longer stops the others.
+- README rewritten with a Design section, and every screenshot and GIF re-recorded.
 - **Progress tracker** in the README: a roadmap checklist grouped by area, an animated SVG of progress per area (`docs/media/progress.svg`), a summary table, and a release timeline. `npm run progress` regenerates it from the checklist; CI fails if it is out of date. 71 tests in total.
 - Desktop: the Windows portable `.exe` gets its own file name, so it no longer overwrites the installer in a release.
 
