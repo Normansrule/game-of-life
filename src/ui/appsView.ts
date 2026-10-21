@@ -38,7 +38,7 @@ const LIVE: App[] = [
   {
     title: 'Epidemics on a grid',
     field: 'Epidemiology',
-    body: 'An SIRS automaton: susceptible cells catch the infection from infected neighbours with probability β per contact, recover, stay immune for a while, then become susceptible again. Spatial structure creates travelling waves and spirals that well-mixed (differential equation) models miss.',
+    body: 'An SIRS (susceptible, infected, recovered, susceptible again) automaton: susceptible cells catch the infection from infected neighbours with probability β per contact, recover, stay immune for a while, then become susceptible again. Spatial structure creates travelling waves and spirals that well-mixed (differential equation) models miss.',
     demo: epidemicDemo,
   },
   {
@@ -92,7 +92,7 @@ const LIVE: App[] = [
   {
     title: 'Predators and prey (Wa-Tor)',
     field: 'Ecology',
-    body: 'Fish (green) swim at random and breed; sharks (orange) eat neighbouring fish, breed, and starve if they go too long without food. The populations rise and crash in turn: fish boom, sharks feast and multiply, fish collapse, sharks starve, and the cycle repeats. The phase chart traces the loop that the Lotka–Volterra equations predict, ẋ = αx − βxy, ẏ = δxy − γy, but on a grid the cycles stay noisy and local instead of perfectly periodic, closer to real field data like the lynx–hare records of the Hudson\'s Bay Company.',
+    body: 'Fish (green) swim at random and breed; sharks (red) eat neighbouring fish, breed, and starve if they go too long without food. The populations rise and crash in turn: fish boom, sharks feast and multiply, fish collapse, sharks starve, and the cycle repeats. The phase chart traces the loop that the Lotka–Volterra equations predict, ẋ = αx − βxy, ẏ = δxy − γy, but on a grid the cycles stay noisy and local instead of perfectly periodic, closer to real field data like the lynx–hare records of the Hudson\'s Bay Company.',
     demo: predatorPreyDemo,
   },
   {
@@ -146,14 +146,22 @@ const MORE: App[] = [
 ];
 
 export function createAppsView(root: HTMLElement) {
-  const demos: { demo: Demo; card: HTMLElement; visible: boolean; started: boolean; make: () => Demo }[] = [];
+  const demos: { demo: Demo | null; card: HTMLElement; visible: boolean; started: boolean; make: () => Demo }[] = [];
+  // A demo that can't draw (no 2D canvas, or it throws) is replaced by a note instead of a blank box.
+  const fail = (d: (typeof demos)[number], err: unknown) => {
+    d.demo = null;
+    console.error(err);
+    d.card.querySelector('.demo-holder')!.replaceChildren(h('div.state.error', {},
+      h('h3', {}, "This demo couldn't run"),
+      h('p', {}, 'Your browser stopped it from drawing, maybe because canvas is turned off or the page ran out of memory. The text still explains the model; reloading the page usually brings the demo back.')));
+  };
   const cards = LIVE.map((app) => {
     const holder = h('div.demo-holder');
-    const card = h('article.app-card.live', {}, h('div.app-text', {}, h('span.field', {}, app.field), h('h3', {}, app.title), h('p', {}, app.body)), holder);
-    demos.push({ demo: null as unknown as Demo, card, visible: false, started: false, make: app.demo! });
+    const card = h('article.app-card.live', {}, h('div.app-text', {}, h('h3', {}, app.title), h('p.field', {}, app.field), h('p', {}, app.body)), holder);
+    demos.push({ demo: null, card, visible: false, started: false, make: app.demo! });
     return card;
   });
-  const more = MORE.map((app) => h('article.app-card', {}, h('span.field', {}, app.field), h('h3', {}, app.title), h('p', {}, app.body)));
+  const more = MORE.map((app) => h('article.app-card', {}, h('h3', {}, app.title), h('p.field', {}, app.field), h('p', {}, app.body)));
   root.append(
     h(
       'div.apps',
@@ -172,8 +180,12 @@ export function createAppsView(root: HTMLElement) {
       d.visible = e.isIntersecting;
       if (d.visible && !d.started) {
         d.started = true;
-        d.demo = d.make();
-        d.card.querySelector('.demo-holder')!.append(d.demo.el);
+        try {
+          d.demo = d.make();
+          d.card.querySelector('.demo-holder')!.append(d.demo.el);
+        } catch (err) {
+          fail(d, err);
+        }
       }
     }
   }, { rootMargin: '100px' });
@@ -183,7 +195,14 @@ export function createAppsView(root: HTMLElement) {
   const loop = () => {
     requestAnimationFrame(loop);
     if (!active) return;
-    for (const d of demos) if (d.visible && d.started) d.demo.tick();
+    for (const d of demos) {
+      if (!d.visible || !d.demo) continue;
+      try {
+        d.demo.tick();
+      } catch (err) {
+        fail(d, err);
+      }
+    }
   };
   requestAnimationFrame(loop);
   return {

@@ -1,9 +1,31 @@
 import type { Cell } from '../engine/life';
 import { LineageRun } from '../engine/lineage';
 import { getPattern, patternCells } from '../engine/patterns';
-import { SpacetimeRenderer, lookAt, multiply, perspective } from '../render/spacetime';
+import { SpacetimeRenderer, type SpacetimeColors, lookAt, multiply, perspective } from '../render/spacetime';
 import { fitCanvas, fmt, h, select, slider, toggle } from './dom';
 import { on } from './bus';
+import { isDark, onTheme, rgb } from './theme';
+
+/**
+ * The 3D palette from the design tokens. By day the history is built of slate
+ * stones capped with a layer of white ones. In Lamplight the board is dimmed
+ * toward the ground, and slate on a dim board is mud, so the stones swap:
+ * the history is white and the present is the slate cap.
+ */
+function spaceColors(): SpacetimeColors {
+  const dark = isDark();
+  const board = rgb('--board');
+  const ground = rgb('--ground');
+  const bg = dark ? (board.map((v, i) => Math.round(v + (ground[i] - v) * 0.45)) as SpacetimeColors['bg']) : board;
+  const [body, cap] = dark ? ['--shell', '--slate'] : ['--slate', '--shell'];
+  return {
+    bg,
+    board,
+    slate: rgb(body),
+    shell: rgb(cap),
+    cats: [body, '--data-pine', '--data-shu', '--data-indigo', '--data-ochre', '--data-plum'].map(rgb),
+  };
+}
 
 const SEEDS = ['gosper', 'rpentomino', 'acorn', 'piheptomino', 'pulsar', 'pentadecathlon', 'glider', 'lwss', 'copperhead', 'switchengine', 'diehard'];
 
@@ -82,7 +104,8 @@ export function createSpacetimeView(root: HTMLElement) {
     instanceCount = total;
     tMax = r.frames.length - 1;
     extent = Math.max(x1 - x0, y1 - y0, 10);
-    cam.dist = Math.max(extent * 1.2, tMax * layerGap) + 15;
+    // The vertical field of view is 0.8 rad, so a tower of height H fits at about 1.5H away.
+    cam.dist = Math.max(extent * 1.2, tMax * layerGap * 1.5) + 15;
     scrub.max = String(tMax);
     reveal = 0;
     playing = true;
@@ -132,6 +155,8 @@ export function createSpacetimeView(root: HTMLElement) {
   }
   requestAnimationFrame(frame);
 
+  onTheme(() => renderer?.setColors(spaceColors()));
+
   on('space:load', ({ cells }) => {
     seedCells = cells;
     patternSel.value = 'custom';
@@ -143,10 +168,15 @@ export function createSpacetimeView(root: HTMLElement) {
       active = true;
       if (!renderer) {
         try {
-          renderer = new SpacetimeRenderer(canvas);
+          renderer = new SpacetimeRenderer(canvas, spaceColors());
           build();
         } catch (e) {
-          wrap.append(h('p.blurb', {}, `3D view unavailable: ${(e as Error).message}`));
+          wrap.append(
+            h('div.state.center.error', {},
+              h('h3', {}, "The 3D view can't start"),
+              h('p', {}, `This browser couldn't open a WebGL2 canvas (${(e as Error).message}). Try a recent Chrome, Firefox or Safari, or turn on hardware acceleration in your browser settings.`),
+            ),
+          );
         }
       }
     },

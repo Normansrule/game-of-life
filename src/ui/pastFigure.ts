@@ -6,6 +6,8 @@
 import { preimageCounts3x3 } from '../engine/predecessors';
 import { drawChart } from './chart';
 import { h } from './dom';
+import { onTheme, tok } from './theme';
+import { CellPainter } from './thumb';
 
 const TOTAL = 1 << 25;
 const CHUNK = 1 << 20;
@@ -17,10 +19,11 @@ function drawWindow(canvas: HTMLCanvasElement, m: number) {
   const ctx = canvas.getContext('2d')!;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   const c = S / 3;
-  for (let i = 0; i < 9; i++) {
-    ctx.fillStyle = (m >> i) & 1 ? '#7df9ff' : 'rgba(255,255,255,0.06)';
-    ctx.fillRect((i % 3) * c + 1, Math.floor(i / 3) * c + 1, c - 2, c - 2);
-  }
+  ctx.fillStyle = tok('--board');
+  ctx.fillRect(0, 0, S, S);
+  const p = new CellPainter(c);
+  for (let i = 0; i < 9; i++) if ((m >> i) & 1) p.add((i % 3) * c, Math.floor(i / 3) * c);
+  p.fill(ctx, '--slate');
 }
 
 export function createPastFigure() {
@@ -29,6 +32,8 @@ export function createPastFigure() {
   const extremes = h('div.past-extremes');
   const stats = h('div.past-stats');
   let started = false;
+  let result: Float64Array | null = null;
+  onTheme(() => result && draw(result));
 
   function start() {
     started = true;
@@ -46,8 +51,9 @@ export function createPastFigure() {
   }
 
   function draw(counts: Float64Array) {
+    result = counts;
     const order = [...counts.keys()].sort((a, b) => counts[b] - counts[a]);
-    drawChart(chart, [{ values: order.map((i) => counts[i]), color: '#c084fc', width: 2, fill: true, label: 'number of 5×5 pasts (log scale)' }],
+    drawChart(chart, [{ values: order.map((i) => counts[i]), color: '--ink', width: 2, fill: true, label: 'number of 5×5 pasts (log scale)' }],
       { logY: true, legend: true, xLabel: 'the 512 possible 3×3 presents, most pasts first' });
     const card = (m: number) => {
       const c = h('canvas.past-win');

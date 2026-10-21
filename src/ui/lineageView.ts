@@ -3,8 +3,10 @@ import { type LineageResult, LineageRun, type Segment } from '../engine/lineage'
 import { getPattern, patternCells } from '../engine/patterns';
 import { drawChart } from './chart';
 import { fitCanvas, fmt, h, select, toast } from './dom';
+import { icon, setIcon } from './icons';
 import { emit, on } from './bus';
-import { drawThumb } from './thumb';
+import { CellPainter, drawBoardLines, drawThumb } from './thumb';
+import { alpha, onTheme, tok } from './theme';
 
 type Mode = 'tree' | 'radial' | 'timeline';
 type Scale = 'linear' | 'sqrt' | 'log';
@@ -16,13 +18,16 @@ interface Layout {
 
 const SEEDS = ['rpentomino', 'acorn', 'piheptomino', 'bheptomino', 'diehard', 'gosper', 'switchengine', 'rabbits'];
 
-const KIND_COLORS: Record<string, string> = {
-  'still life': '#38e8a8',
-  oscillator: '#ffb020',
-  spaceship: '#7df9ff',
-  unknown: '#c084fc',
-  died: '#ff4fa3',
+/** Token for each kind of object; the legend, the tree and the thumbnails all use these. */
+const KIND_TOKENS: Record<string, string> = {
+  'still life': '--data-pine',
+  oscillator: '--data-ochre',
+  spaceship: '--data-indigo',
+  unknown: '--data-plum',
+  died: '--data-shu',
+  reaction: '--ink',
 };
+const kindColor = (k: string) => tok(KIND_TOKENS[k] ?? KIND_TOKENS.unknown);
 
 export function createLineageView(root: HTMLElement) {
   let result: LineageResult | null = null;
@@ -92,13 +97,13 @@ export function createLineageView(root: HTMLElement) {
   scrub.addEventListener('input', () => {
     gen = +scrub.value;
     playing = false;
-    playBtn.textContent = '▶';
+    setIcon(playBtn, 'play');
   });
-  const playBtn = h('button.icon', { title: 'Play the evolution', onclick: () => {
+  const playBtn = h('button.icon', { title: 'Play the evolution', 'aria-label': 'Play the evolution', onclick: () => {
     playing = !playing;
     if (playing && result && gen >= result.generations) gen = 0;
-    playBtn.textContent = playing ? '❚❚' : '▶';
-  } }, '▶');
+    setIcon(playBtn, playing ? 'pause' : 'play');
+  } }, icon('play'));
   const genLabel = h('span.mono');
   const popChart = h('canvas.chart.small');
   const info = h('div.seg-info');
@@ -128,8 +133,8 @@ export function createLineageView(root: HTMLElement) {
     modeSel,
     scaleSel,
     h('div.legend', {},
-      ...Object.entries({ 'still life': 'Still life', oscillator: 'Oscillator', spaceship: 'Spaceship', died: 'Died', unknown: 'Unclassified' }).map(([k, label]) =>
-        h('span', {}, h('i', { style: `background:${KIND_COLORS[k]}` }), label),
+      ...Object.entries({ reaction: 'Reaction', 'still life': 'Still life', oscillator: 'Oscillator', spaceship: 'Spaceship', died: 'Died', unknown: 'Unclassified' }).map(([k, label]) =>
+        h('span', {}, h('i', { style: `background:var(${KIND_TOKENS[k]})` }), label),
       ),
     ),
   );
@@ -167,7 +172,7 @@ export function createLineageView(root: HTMLElement) {
     scrub.max = String(result.generations);
     gen = 0;
     playing = true;
-    playBtn.textContent = '❚❚';
+    setIcon(playBtn, 'pause');
     computeBounds();
     resetCam();
     renderSummary();
@@ -235,23 +240,24 @@ export function createLineageView(root: HTMLElement) {
     } else {
       cam.k = 1;
       cam.x = pad;
-      cam.y = pad;
+      cam.y = topPad();
     }
   }
 
+  /** Tree mode writes leaf names slanting up from the top edge, so it needs headroom for them. */
+  const topPad = () => (mode === 'tree' ? 104 : 36);
+
   function toScreen(p: [number, number]): [number, number] {
-    const W = treeCanvas.clientWidth - 72, H = treeCanvas.clientHeight - 72;
+    const W = treeCanvas.clientWidth - 72, H = treeCanvas.clientHeight - 36 - topPad();
     if (mode === 'radial') return [p[0] * cam.k + cam.x, p[1] * cam.k + cam.y];
     return [p[0] * W * cam.k + cam.x, p[1] * H * cam.k + cam.y];
   }
 
   function segColor(s: Segment): string {
-    if (s.fate === 'died') return KIND_COLORS.died;
-    if (s.fate === 'running' || s.fate === 'escaped') return KIND_COLORS[s.kind ?? 'unknown'];
-    // Internal (split/merged) segments: colour by time like tree rings.
-    const f = tf(s.start);
-    const hue = 250 - f * 140;
-    return `hsl(${hue}, 85%, ${68 - f * 8}%)`;
+    if (s.fate === 'died') return kindColor('died');
+    if (s.fate === 'running' || s.fate === 'escaped') return kindColor(s.kind ?? 'unknown');
+    // Internal (split/merged) segments are the reaction itself: plain ink.
+    return kindColor('reaction');
   }
 
   // ---------- drawing ----------
@@ -267,9 +273,10 @@ export function createLineageView(root: HTMLElement) {
     const u = layout.u;
 
     // Time rings / gridlines.
-    ctx.strokeStyle = 'rgba(140,160,220,0.10)';
-    ctx.fillStyle = 'rgba(160,175,215,0.55)';
-    ctx.font = '10px ui-monospace, monospace';
+    const ui = tok('--ui');
+    ctx.strokeStyle = tok('--rule');
+    ctx.fillStyle = tok('--muted');
+    ctx.font = `11px ${ui}`;
     ctx.lineWidth = 1;
     let lastTick = -Infinity;
     for (const t of timeTicks(layout.tMax)) {
@@ -302,7 +309,8 @@ export function createLineageView(root: HTMLElement) {
       const col = segColor(s);
       const wdt = Math.min(4, 0.5 + Math.log2(1 + s.peak) * 0.45) * (emph ? 1.6 : 1);
       ctx.strokeStyle = col;
-      ctx.globalAlpha = dim && !emph ? 0.12 : s.fate === 'died' ? 0.55 : 0.95;
+      const internal = s.fate === 'split' || s.fate === 'merged';
+      ctx.globalAlpha = dim && !emph ? 0.12 : s.fate === 'died' ? 0.55 : internal && !emph ? 0.6 : 0.95;
       ctx.lineWidth = wdt;
       ctx.beginPath();
       ctx.moveTo(a[0], a[1]);
@@ -310,9 +318,10 @@ export function createLineageView(root: HTMLElement) {
       ctx.stroke();
       // Connectors to parents (curves along constant time).
       ctx.lineWidth = Math.max(0.6, wdt * 0.7);
+      ctx.strokeStyle = tok('--ink');
       s.parents.forEach((pid, i) => {
         const pu = u[pid];
-        ctx.globalAlpha = (dim && !emph ? 0.08 : i === 0 ? 0.7 : 0.25) * (s.fate === 'died' ? 0.7 : 1);
+        ctx.globalAlpha = (dim && !emph ? 0.08 : i === 0 ? 0.5 : 0.25) * (s.fate === 'died' ? 0.7 : 1);
         ctx.setLineDash(i === 0 ? [] : [2, 3]);
         ctx.beginPath();
         const steps = mode === 'radial' ? 12 : 1;
@@ -341,8 +350,8 @@ export function createLineageView(root: HTMLElement) {
     // Leaf labels when there is room.
     const leaves = segs.filter((s) => !s.children.length && s.fate !== 'died' && s.label);
     {
-      ctx.font = '11px system-ui, sans-serif';
-      ctx.fillStyle = 'rgba(225,232,255,0.85)';
+      ctx.font = `12px ${ui}`;
+      ctx.fillStyle = tok('--ink');
       const placed: [number, number][] = [];
       leaves.sort((a, b) => u[a.id] - u[b.id]);
       for (const s of leaves) {
@@ -350,7 +359,7 @@ export function createLineageView(root: HTMLElement) {
         if (b[0] < -20 || b[1] < -20 || b[0] > W + 20 || b[1] > H + 20) continue;
         if (placed.some(([px, py]) => Math.abs(px - b[0]) < 12 && Math.abs(py - b[1]) < 12)) continue;
         placed.push(b);
-        const text = (s.fate === 'escaped' ? '↗ ' : '') + s.label!;
+        const text = s.label! + (s.fate === 'escaped' ? ' (flew off)' : '');
         ctx.save();
         ctx.translate(b[0], b[1]);
         if (mode === 'tree') ctx.rotate(-Math.PI / 2.6);
@@ -369,7 +378,7 @@ export function createLineageView(root: HTMLElement) {
     }
 
     // Current-generation cursor.
-    ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+    ctx.strokeStyle = alpha('--ink', 0.55);
     ctx.setLineDash([4, 4]);
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -431,7 +440,7 @@ export function createLineageView(root: HTMLElement) {
     const dpr = preview.width / Math.max(1, preview.clientWidth);
     const W = preview.clientWidth, H = preview.clientHeight;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.fillStyle = '#060a14';
+    ctx.fillStyle = tok('--board');
     ctx.fillRect(0, 0, W, H);
     if (!result) return;
     const N = result.size;
@@ -457,16 +466,18 @@ export function createLineageView(root: HTMLElement) {
     const s = Math.min(W / (pb.x1 - pb.x0), H / (pb.y1 - pb.y0));
     const ox = (W - (pb.x1 - pb.x0) * s) / 2 - pb.x0 * s;
     const oy = (H - (pb.y1 - pb.y0) * s) / 2 - pb.y0 * s;
+    drawBoardLines(ctx, W, H, s, ox, oy);
+    // Stones of the traced family stay slate; the rest fade back when a branch is selected.
     const dim = highlight.size > 0;
-    const sz = Math.max(1, s - (s > 4 ? 1 : 0));
+    const on = new CellPainter(s);
+    const off = new CellPainter(s);
     for (let i = 0; i < f.cells.length; i++) {
       const c = f.cells[i];
       const x = c % N, y = (c - x) / N;
-      const sid = f.seg[i];
-      const hl = highlight.has(sid);
-      ctx.fillStyle = dim ? (hl ? '#ffffff' : 'rgba(120,140,190,0.35)') : `hsl(${(sid * 137.508) % 360}, 80%, 66%)`;
-      ctx.fillRect(ox + x * s, oy + y * s, sz, sz);
+      (dim && !highlight.has(f.seg[i]) ? off : on).add(ox + x * s, oy + y * s);
     }
+    off.fill(ctx, alpha('--slate', 0.25), false);
+    on.fill(ctx);
     genLabel.textContent = `gen ${gen}`;
   }
 
@@ -490,7 +501,7 @@ export function createLineageView(root: HTMLElement) {
     const groups = new Map<string, { count: number; cells: Cell[]; kind: string }>();
     for (const s of r.segments) {
       if (s.fate !== 'running' && s.fate !== 'escaped') continue;
-      const name = (s.fate === 'escaped' ? '↗ ' : '') + (s.label ?? 'unclassified');
+      const name = (s.label ?? 'unclassified') + (s.fate === 'escaped' ? ' (flew off)' : '');
       const g = groups.get(name) ?? { count: 0, cells: s.endCells, kind: s.kind ?? 'unknown' };
       g.count++;
       groups.set(name, g);
@@ -500,7 +511,7 @@ export function createLineageView(root: HTMLElement) {
         .sort((a, b) => b[1].count - a[1].count)
         .map(([name, g]) => {
           const c = h('canvas.thumb.small');
-          requestAnimationFrame(() => drawThumb(c, g.cells, KIND_COLORS[g.kind] ?? '#fff'));
+          requestAnimationFrame(() => drawThumb(c, g.cells, kindColor(g.kind)));
           return h('div.census-item', {}, c, h('span', {}, name), h('b', {}, `× ${g.count}`));
         }),
     );
@@ -598,7 +609,7 @@ export function createLineageView(root: HTMLElement) {
         gen = result.segments[id].start;
         scrub.value = String(gen);
         playing = false;
-        playBtn.textContent = '▶';
+        setIcon(playBtn, 'play');
       }
     }
     drag = null;
@@ -638,14 +649,21 @@ export function createLineageView(root: HTMLElement) {
       scrub.value = String(gen);
       if (gen >= result.generations) {
         playing = false;
-        playBtn.textContent = '▶';
+        setIcon(playBtn, 'play');
       }
     }
     drawTree();
     drawPreview();
-    drawChart(popChart, [{ values: result.populations, color: '#7df9ff', fill: true }], { marker: gen, xLabel: 'generation' });
+    drawChart(popChart, [{ values: result.populations, color: '--ink', fill: true }], { marker: gen, xLabel: 'generation' });
   }
   requestAnimationFrame(frame);
+
+  // The tree and preview read tokens every frame; the thumbnails are static, so redraw them.
+  onTheme(() => {
+    if (!result) return;
+    renderSummary();
+    if (selected >= 0) showInfo(selected);
+  });
 
   return {
     activate() {

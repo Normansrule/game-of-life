@@ -8,9 +8,14 @@ import { mulberry32 } from '../engine/census';
 import type { Cell } from '../engine/life';
 import { emit } from './bus';
 import { h, select } from './dom';
+import { rgb, tok } from './theme';
 
 const SIZE = 80;
 const DECIDE_AT = 300;
+
+/** Class colours from the data palette: I neutral, II indigo, III vermilion, IV pine. */
+const CLASS_TOKEN: Record<RuleClass, string> = { I: '--muted', II: '--data-indigo', III: '--data-shu', IV: '--data-pine' };
+const classVar = (c: RuleClass) => `var(${CLASS_TOKEN[c]})`;
 
 type SetId = 'famous' | 'neighbours' | 'random';
 
@@ -50,7 +55,7 @@ export function createAtlasView(root: HTMLElement) {
 
   root.append(
     h('div.atlas', {},
-      h('header.math-hero', {},
+      h('header.view-head', {},
         h('h1', {}, 'Rule atlas'),
         h('p', {}, 'Conway\'s rule is one of 262,144 "Life-like" rules (choose any set of neighbour counts for birth and for survival). Here many of them run side by side from random soups on an 80×80 torus. After 300 generations each one is classified automatically from its activity, density and whether the board repeats, into the four classes Stephen Wolfram proposed in 1984. λ is Langton\'s parameter: the fraction of the 512 possible neighbourhoods that produce a live cell.')),
       h('div.controls', {},
@@ -61,7 +66,7 @@ export function createAtlasView(root: HTMLElement) {
       intro,
       grid,
       h('div.atlas-legend', {}, ...(Object.keys(CLASS_INFO) as RuleClass[]).map((c) =>
-        h('div', {}, h('span.cls-dot', { style: `background:${CLASS_INFO[c].colour}` }), h('b', {}, `Class ${c}: ${CLASS_INFO[c].name}. `), CLASS_INFO[c].blurb))),
+        h('div', {}, h('span.cls-dot', { style: `background:${classVar(c)}` }), h('b', {}, `Class ${c}: ${CLASS_INFO[c].name}. `), CLASS_INFO[c].blurb))),
     ),
   );
 
@@ -121,20 +126,21 @@ export function createAtlasView(root: HTMLElement) {
     let pending = 0;
     for (const c of cards) if (c.cls) counts[c.cls]++; else pending++;
     summary.replaceChildren(
-      ...(Object.keys(counts) as RuleClass[]).map((k) => h('span.cls-chip', { style: `--c:${CLASS_INFO[k].colour}` }, `${k} · ${counts[k]}`)),
+      ...(Object.keys(counts) as RuleClass[]).map((k) => h('span.cls-chip', { style: `--c:${classVar(k)}` }, `${k} · ${counts[k]}`)),
       pending ? h('span.dim', {}, ` classifying ${pending}…`) : h('span'),
     );
   }
 
   function paint(c: Card) {
     const d = c.img.data;
-    const col = c.cls ? hexRGB(CLASS_INFO[c.cls].colour) : [190, 230, 255];
+    // Cells are a couple of px here, so flat slate squares on the kaya board.
+    const on = rgb('--slate'), off = rgb('--board');
     const cells = c.run.cells;
     for (let i = 0; i < cells.length; i++) {
-      const on = cells[i];
-      d[i * 4] = on ? col[0] : 8;
-      d[i * 4 + 1] = on ? col[1] : 11;
-      d[i * 4 + 2] = on ? col[2] : 24;
+      const col = cells[i] ? on : off;
+      d[i * 4] = col[0];
+      d[i * 4 + 1] = col[1];
+      d[i * 4 + 2] = col[2];
       d[i * 4 + 3] = 255;
     }
     c.ctx.putImageData(c.img, 0, 0);
@@ -150,7 +156,7 @@ export function createAtlasView(root: HTMLElement) {
     ctx.clearRect(0, 0, w, hh);
     const p = c.run.pops;
     const max = Math.max(1, ...p);
-    ctx.strokeStyle = c.cls ? CLASS_INFO[c.cls].colour : '#7df9ff';
+    ctx.strokeStyle = tok(c.cls ? CLASS_TOKEN[c.cls] : '--ink-2');
     ctx.lineWidth = 1.2;
     ctx.beginPath();
     const n = Math.min(p.length, 600);
@@ -176,7 +182,7 @@ export function createAtlasView(root: HTMLElement) {
         c.cls = c.run.verdict().cls;
         const v = c.run.verdict();
         c.badge.textContent = `${c.cls} · ${CLASS_INFO[c.cls].name}`;
-        c.badge.style.setProperty('--c', CLASS_INFO[c.cls].colour);
+        c.badge.style.setProperty('--c', classVar(c.cls));
         c.badge.classList.add('done');
         c.meta.textContent = `λ = ${v.lambda.toFixed(3)} · activity ${(v.activity * 100).toFixed(1)}% · density ${(v.density * 100).toFixed(1)}%${v.period ? ` · period ${v.period}` : ''}`;
         changed = true;
@@ -193,9 +199,4 @@ export function createAtlasView(root: HTMLElement) {
     activate() { active = true; },
     deactivate() { active = false; },
   };
-}
-
-function hexRGB(hex: string): number[] {
-  const v = parseInt(hex.slice(1), 16);
-  return [(v >> 16) & 255, (v >> 8) & 255, v & 255];
 }

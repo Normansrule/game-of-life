@@ -7,8 +7,10 @@ import type { Cell } from '../engine/life';
 import { patternCells } from '../engine/patterns';
 import { type PredecessorResult, findPredecessors } from '../engine/predecessors';
 import { emit } from './bus';
-import { fitCanvas, h, readVar } from './dom';
-import { drawThumb } from './thumb';
+import { fitCanvas, h } from './dom';
+import { icon } from './icons';
+import { onTheme, tok } from './theme';
+import { CellPainter, drawBoardLines, drawThumb } from './thumb';
 
 const GW = 12, GH = 12;
 const SHOW = 10;
@@ -45,13 +47,13 @@ export function createAncestorsView(root: HTMLElement) {
   const cols = h('div.anc-cols');
   treeWrap.append(lines, cols);
   const status = h('span.mono.dim');
-  const findBtn = h('button.primary', { onclick: () => start() }, '⟲ Find parents');
+  const findBtn = h('button.primary', { onclick: () => start() }, icon('rewind'), 'Find parents');
   const rewindBtn = h('button', { onclick: () => rewind(5), title: 'Go back five generations, taking the smallest parent each time' }, 'Rewind 5 steps');
   const marginSel = h('select', { onchange: (e: Event) => { margin = +(e.target as HTMLSelectElement).value; } },
     h('option', { value: '1' }, 'within 1 cell of the pattern'), h('option', { value: '2' }, 'within 2 cells (slower)'));
 
   root.append(h('div.ancestors', {},
-    h('header.math-hero', {},
+    h('header.view-head', {},
       h('h1', {}, 'Ancestors: running Life backwards'),
       h('p', {}, 'Life is easy to run forwards and hard to run backwards. A pattern can have thousands of possible parents, or none at all. Draw a pattern (or pick one), and the search finds every pattern in a box around it that turns into exactly that pattern one generation later. Click a parent to find its parents in turn, and the tree grows back in time, right to left.')),
     h('div.anc-layout', {},
@@ -84,15 +86,13 @@ export function createAncestorsView(root: HTMLElement) {
     const dpr = editor.width / Math.max(1, editor.clientWidth);
     const W = editor.clientWidth, H = editor.clientHeight;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, W, H);
     const s = Math.min(W / GW, H / GH);
-    ctx.strokeStyle = readVar('--grid') || 'rgba(140,160,220,0.09)';
-    ctx.beginPath();
-    for (let i = 0; i <= GW; i++) { ctx.moveTo(i * s, 0); ctx.lineTo(i * s, GH * s); }
-    for (let i = 0; i <= GH; i++) { ctx.moveTo(0, i * s); ctx.lineTo(GW * s, i * s); }
-    ctx.stroke();
-    ctx.fillStyle = '#7df9ff';
-    for (const [x, y] of current()) ctx.fillRect(x * s + 1.5, y * s + 1.5, s - 3, s - 3);
+    ctx.fillStyle = tok('--board');
+    ctx.fillRect(0, 0, W, H);
+    drawBoardLines(ctx, GW * s, GH * s, s, 0, 0);
+    const p = new CellPainter(s);
+    for (const [x, y] of current()) p.add(x * s, y * s);
+    p.fill(ctx, '--slate');
   }
   let painting: boolean | null = null;
   const cellAt = (e: PointerEvent): Cell | null => {
@@ -173,6 +173,42 @@ export function createAncestorsView(root: HTMLElement) {
     step();
   }
 
+  /** Redo the last search looking one cell further out. */
+  function widen() {
+    if (busy || columns.length < 2) return;
+    margin = 2;
+    marginSel.value = '2';
+    const child = columns[columns.length - 1].child;
+    columns = columns.slice(0, -1);
+    busy = true;
+    status.textContent = 'Searching…';
+    renderTree();
+    later(() => {
+      columns.push(search(child));
+      busy = false;
+      describe();
+      renderTree();
+    });
+  }
+
+  /** The column for a search that found nothing: say why, and what to try next. */
+  function emptyState(r: PredecessorResult, level: number) {
+    const box = `${r.box.w}×${r.box.h}`;
+    const tryWider = margin < 2 ? h('button', { onclick: widen }, 'Look 2 cells out') : '';
+    // Step back and pick the next parent along in the previous generation, if it has another.
+    const prev = columns[level - 1];
+    const other = level > 1 && prev.shown.length > 1 ? (prev.picked + 1) % prev.shown.length : -1;
+    const back = other >= 0 ? h('button', { onclick: () => pick(level - 1, other) }, 'Try another parent') : '';
+    if (r.exhausted) return h('div.state', {},
+      h('h3', {}, level === 1 ? 'No parents in the box' : 'A dead end'),
+      h('p', {}, `Nothing in the ${box} box turns into this pattern. It might be a Garden of Eden (a pattern with no past at all), or its parent needs live cells further out.${margin < 2 ? ' Widening the search can tell them apart, slowly.' : ''}`),
+      tryWider || back ? h('div.actions', {}, tryWider, back) : '');
+    return h('div.state', {},
+      h('h3', {}, 'The search gave up'),
+      h('p', {}, `It ran out of steps before finding a parent in the ${box} box, so this doesn't prove there isn't one. Smaller patterns search much faster${margin > 1 ? ', and so does looking only 1 cell out' : ''}.`),
+      back ? h('div.actions', {}, back) : '');
+  }
+
   function describe() {
     const last = columns[columns.length - 1];
     const r = last.result;
@@ -195,13 +231,14 @@ export function createAncestorsView(root: HTMLElement) {
           c, h('span.small', {}, `${p.length} cells`),
           h('button.link.small', { onclick: (e: Event) => { e.stopPropagation(); emit('sim:load', { cells: p, name: level ? `Ancestor −${level}` : 'Target' }); emit('navigate', { route: 'sim' }); } }, 'simulate'));
         if (level > 0) card.addEventListener('click', () => pick(level, i));
-        requestAnimationFrame(() => drawThumb(c, p, level === 0 ? '#ffffff' : '#c084fc', 'rgba(0,0,0,0.3)', 3));
+        requestAnimationFrame(() => drawThumb(c, p, level === 0 ? '--shell' : '--slate', '--board', 3));
         return card;
       });
       return h('div.anc-col', {}, h('div.anc-col-head', {}, h('b', {}, head), h('span.small.dim', {}, note)), ...col.cards,
-        busy && level === columns.length - 1 ? h('div.anc-spinner', {}, 'searching…') : '');
+        r && !r.parents.length && !busy ? emptyState(r, level) : '');
     }).reverse());
-    if (busy) cols.append(h('div.anc-col', {}, h('div.anc-col-head', {}, h('b', {}, `Generation −${columns.length}`)), h('div.anc-spinner', {}, 'searching…')));
+    if (busy) cols.prepend(h('div.anc-col', {}, h('div.anc-col-head', {}, h('b', {}, `Generation −${columns.length}`)),
+      h('div.anc-spinner', {}, h('span.stones-loading', { 'aria-hidden': 'true' }, h('i'), h('i'), h('i')), 'Searching for parents…')));
     requestAnimationFrame(drawLines);
     treeWrap.scrollLeft = 0;
   }
@@ -227,6 +264,7 @@ export function createAncestorsView(root: HTMLElement) {
     lines.innerHTML = paths.join('');
   }
   window.addEventListener('resize', () => requestAnimationFrame(drawLines));
+  onTheme(() => { drawEditor(); renderTree(); });
 
   let first = true;
   return {

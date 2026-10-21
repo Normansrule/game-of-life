@@ -1,57 +1,37 @@
 export type RGB = [number, number, number];
 
+/**
+ * How stones are coloured on the board.
+ *  - turns: births alternate black and white each generation, like turns in Go,
+ *           so you can read a pattern's age in bands.
+ *  - age:   newborn stones are clamshell white and darken to slate as they survive.
+ *  - slate: every stone is black.
+ */
+export type Colouring = 'turns' | 'age' | 'slate';
+
 export interface Palette {
-  id: string;
+  id: Colouring;
   name: string;
-  background: RGB;
-  /** Colour ramp for live cells from newborn (t=0) to ancient (t=1). */
-  alive: RGB[];
-  /** Colour ramp for the fading trail left by dead cells. */
-  trail: RGB[];
 }
 
-const hex = (h: string): RGB => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
-
 export const PALETTES: Palette[] = [
-  {
-    id: 'aurora',
-    name: 'Aurora',
-    background: hex('#070b16'),
-    alive: ['#ffffff', '#7df9ff', '#38e8a8', '#c6f432', '#ffb020', '#ff4fa3', '#9b5cff'].map(hex),
-    trail: ['#0b1430', '#1b2f7a', '#5b3fd6'].map(hex),
-  },
-  {
-    id: 'inferno',
-    name: 'Inferno',
-    background: hex('#0a0507'),
-    alive: ['#fffbe0', '#ffe066', '#ff9a1f', '#f2441d', '#b5135d', '#5a0b6e'].map(hex),
-    trail: ['#1a0508', '#5c0d14', '#b8261c'].map(hex),
-  },
-  {
-    id: 'ocean',
-    name: 'Deep Ocean',
-    background: hex('#020a12'),
-    alive: ['#f2ffff', '#8ff3ff', '#2fb8f0', '#2563eb', '#4338ca'].map(hex),
-    trail: ['#03151f', '#0b3b52', '#127a8a'].map(hex),
-  },
-  {
-    id: 'matrix',
-    name: 'Phosphor',
-    background: hex('#020703'),
-    alive: ['#eaffea', '#7dff8a', '#22c55e', '#15803d', '#0f5132'].map(hex),
-    trail: ['#020d04', '#063d12', '#0f6b22'].map(hex),
-  },
-  {
-    id: 'mono',
-    name: 'Paper',
-    background: hex('#f4f1ea'),
-    alive: ['#111111', '#222222', '#333344'].map(hex),
-    trail: ['#f4f1ea', '#d9d2c3', '#b9ae98'].map(hex),
-  },
+  { id: 'turns', name: 'Turns (black and white)' },
+  { id: 'age', name: 'Age (white to black)' },
+  { id: 'slate', name: 'Slate only' },
 ];
 
 export function getPalette(id: string): Palette {
   return PALETTES.find((p) => p.id === id) ?? PALETTES[0];
+}
+
+/** Board colours, read from the design tokens so they follow light and dark mode. */
+export interface BoardTheme {
+  board: RGB;
+  edge: RGB;
+  line: RGB;
+  slate: RGB;
+  shell: RGB;
+  dark: boolean;
 }
 
 export function sampleRamp(ramp: RGB[], t: number): RGB {
@@ -69,14 +49,22 @@ export function ageT(age: number): number {
   return Math.log(age) / Math.log(255);
 }
 
-/** 256 x 2 RGBA texture: row 0 = alive by age, row 1 = trail by intensity. */
-export function paletteTexture(p: Palette): Uint8Array {
-  const data = new Uint8Array(256 * 2 * 4);
+/** Stone colour for a live cell, shared by the WebGL and canvas renderers. */
+export function stoneColor(p: Palette, t: BoardTheme, age: number, generation: number): RGB {
+  if (p.id === 'slate') return t.slate;
+  if (p.id === 'age') return sampleRamp([t.shell, [190, 183, 168], [104, 99, 92], t.slate], ageT(Math.max(1, age)));
+  // A cell born at generation g has age = generation - g + 1. Very old stones (age saturates at 255) are black.
+  if (age >= 255) return t.slate;
+  return (generation - age + 1) % 2 === 0 ? t.slate : t.shell;
+}
+
+/** 256 x 1 RGBA texture of the age ramp, used by the shader in "age" mode. */
+export function ageTexture(t: BoardTheme): Uint8Array {
+  const data = new Uint8Array(256 * 4);
+  const ramp: RGB[] = [t.shell, [190, 183, 168], [104, 99, 92], t.slate];
   for (let i = 0; i < 256; i++) {
-    const a = sampleRamp(p.alive, i / 255);
-    const t = sampleRamp(p.trail, i / 255);
-    data.set([a[0], a[1], a[2], 255], i * 4);
-    data.set([t[0], t[1], t[2], 255], (256 + i) * 4);
+    const c = sampleRamp(ramp, ageT(Math.max(1, i)));
+    data.set([c[0], c[1], c[2], 255], i * 4);
   }
   return data;
 }

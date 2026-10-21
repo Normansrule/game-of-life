@@ -14,6 +14,8 @@
     "progress": "node scripts/progress.ts"
   },
   "dependencies": {
+    "@fontsource-variable/bricolage-grotesque": "^5.3.0",
+    "@fontsource-variable/literata": "^5.3.0",
     "katex": "^0.16.22"
   },
   "devDependencies": {

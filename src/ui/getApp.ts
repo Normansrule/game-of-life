@@ -4,6 +4,7 @@
  * the desktop downloads on GitHub Releases.
  */
 import { h } from './dom';
+import { icon } from './icons';
 
 const RELEASES = 'https://github.com/Normansrule/game-of-life/releases/latest';
 const SITE = 'https://normansrule.github.io/game-of-life/';
@@ -11,6 +12,11 @@ const SITE = 'https://normansrule.github.io/game-of-life/';
 interface InstallPrompt extends Event { prompt(): Promise<void>; userChoice: Promise<{ outcome: string }> }
 
 const isDesktopApp = () => navigator.userAgent.includes('Electron');
+let dialogRef: HTMLDialogElement | null = null;
+
+/** Open the Get the app dialog (used by the home page). */
+export const openGetApp = () => dialogRef?.showModal();
+
 const isInstalled = () => window.matchMedia?.('(display-mode: standalone)').matches || isDesktopApp();
 
 export function setupGetApp(button: HTMLElement | null) {
@@ -30,7 +36,7 @@ export function setupGetApp(button: HTMLElement | null) {
     deferred = null;
     installBtn.disabled = true;
   } }, 'Install in this browser');
-  const installNote = h('p.small.dim', {}, 'Your browser has not offered installation here. In Chrome or Edge use the install icon in the address bar; on iPhone or iPad use Share → Add to Home Screen; in Firefox, use the desktop app below.');
+  const installNote = h('p.small.dim', {}, 'Your browser has not offered installation here. In Chrome or Edge use the install icon in the address bar; on iPhone or iPad use Share, then Add to Home Screen; in Firefox, use the desktop app below.');
   installBtn.disabled = true;
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
@@ -44,7 +50,7 @@ export function setupGetApp(button: HTMLElement | null) {
   const dl = (name: string, what: string) => h(`a.app-dl${name === os ? '.mine' : ''}`, { href: RELEASES, target: '_blank', rel: 'noopener' }, h('b', {}, name), h('span.small.dim', {}, what));
 
   const dialog = h('dialog.app-dialog', {},
-    h('form', { method: 'dialog' }, h('button.app-close', { 'aria-label': 'Close' }, '×')),
+    h('form', { method: 'dialog' }, h('button.app-close', { 'aria-label': 'Close' }, icon('cross'))),
     h('h2', {}, 'Get Life Tree'),
     h('section', {}, h('h3', {}, 'Web app'),
       h('p', {}, 'The whole explorer runs in your browser, nothing to install: ', h('a', { href: SITE, target: '_blank', rel: 'noopener' }, SITE.replace('https://', ''))),
@@ -56,7 +62,13 @@ export function setupGetApp(button: HTMLElement | null) {
         dl('macOS', 'disk image (.dmg)'),
         dl('Linux', 'AppImage or .deb'))),
   );
+  button.replaceChildren(icon('download'), h('span.get-app-label', {}, 'Get the app'));
+  button.setAttribute('aria-label', 'Get the app');
   document.body.append(dialog);
+  dialogRef = dialog;
   button.addEventListener('click', () => dialog.showModal());
   dialog.addEventListener('click', (e) => { if (e.target === dialog) dialog.close(); });
 }
+
+/** True inside the installed web app or the desktop app, where "Get the app" makes no sense. */
+export const isInstalledApp = () => isInstalled();

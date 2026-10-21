@@ -5,10 +5,13 @@
 import { type Cell, evolveSparse } from '../engine/life';
 import { type Difficulty, PUZZLES, type Puzzle } from '../engine/puzzles';
 import { emit } from './bus';
-import { fitCanvas, h, readVar } from './dom';
+import { fitCanvas, h } from './dom';
+import { icon, setIcon } from './icons';
+import { onTheme, tok } from './theme';
+import { CellPainter, drawBoardLines } from './thumb';
 
 const STORE = 'life-tree:puzzles:v1';
-const DIFF_COLOUR: Record<Difficulty, string> = { easy: '#38e8a8', medium: '#ffb020', hard: '#ff4fa3' };
+const DIFF_COLOUR: Record<Difficulty, string> = { easy: 'var(--data-pine)', medium: 'var(--data-ochre)', hard: 'var(--data-shu)' };
 
 interface Saved { solved: string[]; drafts: Record<string, Cell[]> }
 
@@ -40,11 +43,11 @@ export function createPuzzlesView(root: HTMLElement) {
   const canvas = h('canvas.pz-canvas');
   const verdict = h('div.pz-verdict');
   const info = h('span.mono.dim');
-  const playBtn = h('button', { onclick: () => (playing ? stop() : play()) }, '▶ Watch it run');
+  const playBtn = h('button', { onclick: () => (playing ? stop() : play()) }, icon('play'), 'Watch it run');
   const checkBtn = h('button.primary', { onclick: check }, 'Check');
 
   root.append(h('div.puzzles', {},
-    h('header.math-hero', {},
+    h('header.view-head', {},
       h('h1', {}, 'Puzzles'),
       h('p', {}, 'Ten construction challenges. Draw on the grid, press Check, and the same engine that runs the simulator decides whether your pattern does what the goal asks. Wrong answers are told what their pattern actually does, which is often the best clue.')),
     h('div.pz-layout', {},
@@ -63,7 +66,7 @@ export function createPuzzlesView(root: HTMLElement) {
 
   function renderList() {
     list.replaceChildren(...PUZZLES.map((p, i) => h(`button.pz-item${p.id === puzzle.id ? '.active' : ''}${saved.solved.includes(p.id) ? '.solved' : ''}`, { onclick: () => select(p) },
-      h('span.pz-num', {}, saved.solved.includes(p.id) ? '✓' : String(i + 1)),
+      h('span.pz-num', {}, saved.solved.includes(p.id) ? icon('check') : String(i + 1)),
       h('span', {}, h('b', {}, p.title), h('span.pz-dot', { style: `background:${DIFF_COLOUR[p.difficulty]}`, title: p.difficulty })))));
     const n = saved.solved.filter((id) => PUZZLES.some((p) => p.id === id)).length;
     progress.replaceChildren(h('b', {}, `${n} / ${PUZZLES.length} solved`), h('div.pz-bar', {}, h('span', { style: `width:${(n / PUZZLES.length) * 100}%` })));
@@ -92,8 +95,12 @@ export function createPuzzlesView(root: HTMLElement) {
   function check() {
     stop();
     const v = puzzle.check(currentCells());
-    verdict.replaceChildren(h(v.ok ? 'div.ok' : 'div.bad', {}, v.ok ? `✓ Solved! ${v.message}` : v.message));
     if (v.ok && !saved.solved.includes(puzzle.id)) { saved.solved.push(puzzle.id); persist(); renderList(); }
+    const next = v.ok ? PUZZLES.find((p) => !saved.solved.includes(p.id)) : undefined;
+    verdict.replaceChildren(h(v.ok ? 'div.ok' : 'div.bad', {},
+      v.ok ? `Solved! ${v.message}` : v.message,
+      next ? h('div.fig-controls', {}, h('button', { onclick: () => select(next) }, `Next: ${next.title}`)) : '',
+      !v.ok && cells.size ? h('div.fig-controls', {}, h('button', { onclick: play }, icon('play'), 'Watch what it does')) : ''));
   }
 
   function openInSim() {
@@ -109,12 +116,12 @@ export function createPuzzlesView(root: HTMLElement) {
     playing = currentCells();
     gen = 0;
     done = false;
-    playBtn.textContent = '■ Back to drawing';
+    setIcon(playBtn, 'stop', 'Back to drawing');
     canvas.classList.add('playing');
   }
   function stop() {
     playing = null;
-    playBtn.textContent = '▶ Watch it run';
+    setIcon(playBtn, 'play', 'Watch it run');
     canvas.classList.remove('playing');
     info.textContent = '';
     resetView();
@@ -154,26 +161,23 @@ export function createPuzzlesView(root: HTMLElement) {
     const dpr = canvas.width / Math.max(1, canvas.clientWidth);
     const W = canvas.clientWidth, H = canvas.clientHeight;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, W, H);
     const { s, ox, oy } = geometry();
-    // The puzzle grid.
-    ctx.fillStyle = 'rgba(255,255,255,0.03)';
-    ctx.fillRect(ox + (0 - view.x0) * s, oy + (0 - view.y0) * s, puzzle.w * s, puzzle.h * s);
-    if (s >= 6) {
-      ctx.strokeStyle = readVar('--grid') || 'rgba(140,160,220,0.09)';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      for (let x = 0; x <= puzzle.w; x++) { const px = ox + (x - view.x0) * s; ctx.moveTo(px, oy - view.y0 * s); ctx.lineTo(px, oy + (puzzle.h - view.y0) * s); }
-      for (let y = 0; y <= puzzle.h; y++) { const py = oy + (y - view.y0) * s; ctx.moveTo(ox - view.x0 * s, py); ctx.lineTo(ox + (puzzle.w - view.x0) * s, py); }
-      ctx.stroke();
-    }
+    // The puzzle area is the board; anything a running pattern grows into beyond it is the board's edge.
+    const bx = ox - view.x0 * s, by = oy - view.y0 * s, bw = puzzle.w * s, bh = puzzle.h * s;
+    ctx.fillStyle = tok(playing && (bw < W - 1 || bh < H - 1) ? '--board-edge' : '--board');
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = tok('--board');
+    ctx.fillRect(bx, by, bw, bh);
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(bx, by, bw, bh);
+    ctx.clip();
+    drawBoardLines(ctx, W, H, s, bx, by);
+    ctx.restore();
     const live = playing ?? currentCells();
-    ctx.fillStyle = playing ? '#c084fc' : '#7df9ff';
-    ctx.shadowColor = ctx.fillStyle;
-    ctx.shadowBlur = s > 8 ? 8 : 0;
-    const g = s > 4 ? Math.max(1, s * 0.08) : 0;
-    for (const [x, y] of live) ctx.fillRect(ox + (x - view.x0) * s + g, oy + (y - view.y0) * s + g, Math.max(1, s - 2 * g), Math.max(1, s - 2 * g));
-    ctx.shadowBlur = 0;
+    const p = new CellPainter(s);
+    for (const [x, y] of live) p.add(ox + (x - view.x0) * s, oy + (y - view.y0) * s);
+    p.fill(ctx, '--slate');
   }
 
   // ---- editing ----
@@ -204,6 +208,7 @@ export function createPuzzlesView(root: HTMLElement) {
   canvas.addEventListener('pointerup', end);
   canvas.addEventListener('pointercancel', end);
   window.addEventListener('resize', () => active && draw());
+  onTheme(draw);
 
   select(PUZZLES.find((p) => !saved.solved.includes(p.id)) ?? PUZZLES[0]);
   return {
