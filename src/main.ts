@@ -9,6 +9,7 @@ import { createDeepView } from './ui/deepView';
 import { createAtlasView } from './ui/atlasView';
 import { createEvolveView } from './ui/evolveView';
 import { createPuzzlesView } from './ui/puzzlesView';
+import { createDuelView } from './ui/duelView';
 import { createAncestorsView } from './ui/ancestorsView';
 import { on } from './ui/bus';
 import { setupGetApp } from './ui/getApp';
@@ -35,6 +36,7 @@ const routes: Record<string, (root: HTMLElement) => View> = {
   atlas: createAtlasView,
   evolve: createEvolveView,
   puzzles: createPuzzlesView,
+  duel: createDuelView,
   math: createMathView,
   apps: createAppsView,
 };

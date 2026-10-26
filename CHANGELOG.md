@@ -1,5 +1,12 @@
 # Changelog
 
+## 8.3.0
+
+- **Duel**, a new view: Life for two players (Immigration). Black stones are yours and white the computer's. Each round both sides take turns placing three stones, then the board runs eight generations, and a newborn takes the colour of most of its parents. After five rounds, whoever has more stones wins. The computer plays at Easy, Normal or Hard by running each candidate move forward and comparing the stone counts. A preview shows faint stones where the board would end up if you played at the point you're aiming at. Your record at each level is kept in the browser, and the board plays fully from the keyboard.
+- The computer opens rounds 1, 3 and 5, so you place the last stone of the game. In computer-against-computer trials, the side that places the last stone of a round won most games, so this ordering gives the advantage to you.
+- The home page lists twelve views, with Puzzles and Duel in a new Play group.
+- Four tests for the Immigration rules and the computer player (75 in total).
+
 ## 8.2.0
 
 - **The home page is a scroll story on a 3D Go board.** A kaya board with lit, lens-shaped slate and clamshell stones stays pinned while four chapters scroll past. Five stones drop into place, the rule runs generation by generation, and then every generation is stacked into a tower the camera circles. The scroll position drives everything, so scrolling up runs it backwards. With a mouse, a warm light follows the pointer across the board and lifts the stones under it. Reduced motion holds the camera still for each chapter, and browsers without WebGL2 get the chapters as plain paragraphs.

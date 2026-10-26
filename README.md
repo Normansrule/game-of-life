@@ -22,6 +22,7 @@ It's a static site written in TypeScript and built with Vite. Everything runs in
 - **3D spacetime and deep time.** Stack generations into a sculpture you can turn, or jump up to 2^50 generations ahead with Hashlife.
 - **State-space trees.** Every configuration of a tiny board, and the cycle each one falls into.
 - **Rule atlas, evolution and puzzles.** Eighteen rules run side by side and get classified as they go. A genetic algorithm breeds rules that compute. Ten puzzles are checked by the engine.
+- **Duel.** Life for two players, a variant called Immigration. Your black stones play the computer's white over five rounds, at three levels.
 - **Math and applications.** Nineteen sections of math with live charts, and eighteen running models of real systems.
 - **Daylight and Lamplight.** Light and dark colour modes that follow your system, or that you pick with the sun and moon button.
 - **Works everywhere.** The layout works on phones, every control can be reached with the keyboard, and reduced-motion settings are respected.
@@ -60,7 +61,7 @@ flowchart LR
 <!-- progress:start -->
 ![Progress by area](docs/media/progress.svg)
 
-**34 of 44 roadmap items done (77%).** Generated from the checklist below by `npm run progress`.
+**35 of 45 roadmap items done (78%).** Generated from the checklist below by `npm run progress`.
 
 | Area | Progress | Done | Up next |
 | --- | --- | --- | --- |
@@ -69,7 +70,7 @@ flowchart LR
 | Math | ▰▰▰▰▰▰▰▰▰▱ 89% | 8 / 9 | Glider synthesis: building patterns from colliding gliders |
 | Applications | ▰▰▰▰▰▰▰▰▱▱ 75% | 3 / 4 | Neural cellular automata that regrow an image |
 | Games and labs | ▰▰▰▰▰▰▰▰▱▱ 75% | 3 / 4 | A daily puzzle |
-| Apps and publishing | ▰▰▰▰▰▰▰▰▱▱ 77% | 10 / 13 | Intel Mac build; Code-signed installers |
+| Apps and publishing | ▰▰▰▰▰▰▰▰▱▱ 79% | 11 / 14 | Intel Mac build; Code-signed installers |
 <!-- progress:end -->
 
 ### Releases
@@ -88,6 +89,7 @@ timeline
   v8 : Common Room redesign, home page, light and dark modes
   v8.1 : Step back and undo, puzzle play, one voice for figures
   v8.2 : A scroll story on a 3D Go board, a rule toy, live view cards
+  v8.3 : Duel, Life for two players against the computer
 ```
 
 Full details in [CHANGELOG.md](CHANGELOG.md).
@@ -149,6 +151,7 @@ Tick a box here and run `npm run progress` to redraw the bars above. CI fails if
 - [x] Common Room redesign: a Go-board look with light and dark modes, and a home page
 - [x] Step back in time and undo on the board; keyboard play and best scores in puzzles
 - [x] A scroll story on a 3D Go board for the home page, with a rule toy and live view cards
+- [x] Duel: two-player Immigration against a computer player at three levels
 - [ ] Intel Mac build
 - [ ] Code-signed installers
 - [ ] Automatic updates in the desktop app
@@ -212,6 +215,13 @@ A genetic algorithm, running in a Web Worker, breeds one-dimensional radius-3 ru
 Ten construction challenges, from "draw a still life" to "draw a period-3 oscillator" and "make a pattern that vanishes after at least 100 generations". Place stones on a small Go board, press **Check**, and the engine runs your pattern and decides. A wrong answer is told what its pattern actually does (for example "That pattern dies out after 4 generations"), and **Watch it run** plays it in place, with black and white stones taking turns as on the main board. Each puzzle remembers the fewest stones you've solved it with, so there's a reason to go back. You can play entirely from the keyboard (arrows, Space, Enter), and undo or redo any move. Progress, drafts and best scores are saved in the browser.
 
 ![Puzzles](docs/screenshots/puzzles.png)
+
+### Duel
+Life for two players, a variant called **Immigration** that Don Woods described in 1971. The rules are Conway's, but every stone belongs to a side. A surviving stone keeps its colour, and a new stone takes the colour of most of the three stones that made it. You play black against the computer's white on a 13-line board. Each round the two sides take turns placing three stones each, and then the board runs eight generations. After five rounds, whoever has more stones wins.
+
+The computer tries each empty point near the stones, runs the board forward and keeps the move that leaves it furthest ahead. On **Easy** it picks loosely from the better half of those moves, on **Normal** it only looks at a sample of them, and on **Hard** it tries every one. The last stone before a run counts most, so the computer opens rounds 1, 3 and 5, which means you place the last stone of the game. With **Show where it ends up** on, pointing at a point shows faint stones where the board would finish after the run if you played there. Your record at each level is saved in the browser.
+
+![Duel against the computer](docs/screenshots/duel.png)
 
 ### The math
 A long-form page with KaTeX formulas and charts computed live from the same engine: the rule as a formula, convolution, counting rules and states, **mean-field theory** with a cobweb diagram checked against real soups, **block entropy**, **damage spreading**, the **speed of light**, growth rates of guns, **phase space and the Garden of Eden theorem**, a proof that the lineage tree is well defined, the **linear replicator rule over the two-element field 𝔽₂**, Turing universality, Hashlife, a live **census of random soups** with a Zipf rank–frequency fit and Shannon diversity, **self-organised criticality and the sandpile group** (the abelian property, the group order as a determinant and spanning-tree count, the group identity drawn live, and a measured avalanche exponent), **rule space and the edge of chaos** (Langton's λ against live-classified random rules, and a proof that the replicator rule erases every pattern on a 2^k torus), and **evolving computation** (why local majority fails, how GKL works, the GA's fitness function, and the Land–Belew impossibility result, with live accuracy curves), and **every pattern in a 4×4 box**: Burnside's lemma counts the 8548 patterns up to symmetry, and all of them are run to their fate in a background thread, with the share of each outcome, fate by starting size, the lifespan distribution and a gallery of the longest-lived methuselahs, and **running time backwards**: parents as a constraint-satisfaction problem, and all 2^25 5×5 patterns stepped once to show how unevenly the 512 possible 3×3 results are reached (entropy 7.40 of 9 bits). See [docs/MATH.md](docs/MATH.md).
@@ -279,7 +289,7 @@ npm run dev        # then open the http://localhost:5173 address it prints
 | `npm run preview` | Serves the production build locally (installable, works offline) |
 | `npm run progress` | Redraws the progress tracker from the roadmap checklist |
 
-The site opens on the home page, and the top bar lists all eleven views. Your choice of colour mode is saved in the browser. The installed app and the desktop app skip the home page and open straight on the board.
+The site opens on the home page, and the top bar lists all twelve views. Your choice of colour mode is saved in the browser. The installed app and the desktop app skip the home page and open straight on the board.
 
 ### Keyboard shortcuts (board)
 
@@ -323,7 +333,7 @@ flowchart TB
     gl["WebGL2 grid shader<br/>(Canvas 2D fallback)"]
     cubes["instanced 3D cubes"]
   end
-  subgraph ui["src/ui: eleven views"]
+  subgraph ui["src/ui: twelve views"]
     sim["Simulator"]; tree["Lineage tree"]; space["3D spacetime"]; deep["Deep time"]
     basinv["State space"]; anc["Ancestors"]; atlas["Rule atlas"]; evo["Evolution"]
     puz["Puzzles"]; math["Math"]; apps["Applications"]
@@ -385,6 +395,7 @@ src/
     evolve.ts      1D rules, GKL, and a genetic algorithm for density classification
     exhaustive.ts  Burnside counts, D4 orbit representatives and a fate runner for small patterns
     puzzles.ts     puzzle definitions and their automatic checkers
+    immigration.ts two-colour Life for Duel, and the computer player
     predecessors.ts  backtracking parent search and the 3×3 preimage census
     models/        sandpile, FHP gas, Wa-Tor, excitable medium, snowflakes, Lenia, Schelling, hodgepodge, traffic
   render/
@@ -396,6 +407,7 @@ src/
     homeView.ts    the home page and its live 19-line board
     homeStory.ts   the scroll story at the top of the home page
     homeSections.ts  the rule toy, the numbers and the view cards
+    duelView.ts    Duel against the computer
     theme.ts       colour modes, and design tokens for canvas code
     icons.ts       the icon set (inline SVG on a 24-unit grid)
     ...            the other ten views, charts, demos and small DOM helpers
