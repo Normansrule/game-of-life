@@ -119,7 +119,10 @@ const GROUPS: [string, Card[]][] = [
   ['Try other rules', [
     { route: 'atlas', name: 'Rule atlas', what: 'Eighteen of the 262,144 Life-like rules running side by side, sorted by behaviour.', pattern: 'bheptomino' },
     { route: 'evolve', name: 'Evolution', what: 'Breed rules with a genetic algorithm and watch them get better at a task.', pattern: 'lwss' },
+  ]],
+  ['Play', [
     { route: 'puzzles', name: 'Puzzles', what: 'Ten challenges, from a still life to a spaceship, checked by the engine.', pattern: 'glider' },
+    { route: 'duel', name: 'Duel', what: 'Life for two players: your black stones against the computer\u2019s white, over five rounds.', pattern: 'beacon' },
   ]],
   ['Understand it', [
     { route: 'math', name: 'Math', what: 'Nineteen sections, from the rules themselves to running time backwards.', pattern: 'pentadecathlon' },
@@ -199,7 +202,7 @@ export function viewCards() {
     return h('li', {}, a);
   };
   const el = h('section.home-section.views-section', { 'aria-labelledby': 'h-views' },
-    h('h2', { id: 'h-views' }, 'Eleven ways to read one board'),
+    h('h2', { id: 'h-views' }, 'Twelve ways to read one board'),
     h('p.intro', {}, 'Every view starts from the same board. Draw something once, then follow it forward in time, backward to its possible parents, across other rules, or into the maths behind it. Point at a card to see its board move.'),
     h('div.vc-groups', {}, ...GROUPS.map(([title, cards]) => h('div.vc-group', {}, h('h3', {}, title), h('ul', {}, ...cards.map(card))))));
 
