@@ -393,6 +393,7 @@ table.data td { font-size: var(--fs-sm); font-variant-numeric: tabular-nums; }
 .spacetime { display: flex; flex-direction: column; height: calc(100vh - var(--topbar)); }
 .spacetime .tree-wrap { flex: 1; }
 .space-slider .slider { margin: 0; min-width: 160px; }
+.space-slider .slider span { white-space: nowrap; }
 .space-footer { display: flex; gap: 14px; align-items: center; padding: 8px var(--sp-1); border-top: 1px solid var(--rule); color: var(--muted); }
 .space-footer .scrub { flex: 1; }
 .stats.two { grid-template-columns: repeat(2, 1fr); margin-bottom: 8px; }
@@ -627,6 +628,8 @@ canvas.past-win { width: 54px; height: 54px; }
 .duel-verdict p { margin: 0; font: var(--fs-lg) / 1.5 var(--text); color: var(--ink-2); }
 .duel-verdict b { color: var(--ink); font-family: var(--ui); font-weight: 700; }
 .duel-controls { display: flex; flex-wrap: wrap; gap: var(--sp-h); align-items: center; justify-content: space-between; }
+.duel-opponent { display: flex; gap: 8px; align-items: center; justify-content: space-between; }
+.duel-controls select:disabled { opacity: 0.5; }
 .duel-record { margin: 0; color: var(--muted); font-size: var(--fs-sm); }
 .duel-record:empty { display: none; }
 .duel-how summary { cursor: pointer; font-weight: 600; }

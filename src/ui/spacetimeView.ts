@@ -1,7 +1,7 @@
 import type { Cell } from '../engine/life';
 import { LineageRun } from '../engine/lineage';
 import { getPattern, patternCells } from '../engine/patterns';
-import { SpacetimeRenderer, type SpacetimeColors, lookAt, multiply, perspective } from '../render/spacetime';
+import { STONE_LIMIT, SpacetimeRenderer, type SpacetimeColors, lookAt, multiply, perspective } from '../render/spacetime';
 import { fitCanvas, fmt, h, select, slider, toggle } from './dom';
 import { on } from './bus';
 import { isDark, onTheme, rgb } from './theme';
@@ -37,15 +37,17 @@ export function createSpacetimeView(root: HTMLElement) {
   let playing = true;
   let autoRotate = true;
   let colorMode = 0;
-  let layerGap = 1;
+  let layerGap = 0.5;
+  let shape: 'stones' | 'cubes' = 'stones';
   let active = false;
   let renderer: SpacetimeRenderer | null = null;
   let extent = 40;
   const cam = { yaw: 0.8, pitch: 0.7, dist: 120 };
   // Until you zoom, the camera dollies back as the tower grows, so it always fills the view.
-  // The vertical field of view is 0.8 rad, so a tower of height H fits at about 1.5H away.
+  // The vertical field of view is 0.8 rad, so a tower of height H fits at about 1.2H away
+  // seen side on. Looking down at it, the top layers are nearer and larger, so allow 2.2H.
   let userZoomed = false;
-  const fitDist = (height: number) => Math.max(extent * 1.2, height * layerGap * 1.5) + 15;
+  const fitDist = (height: number) => Math.max(extent * 1.2, height * layerGap * 2.2) + 15;
   let instanceCount = 0;
 
   const canvas = h('canvas.space-canvas');
@@ -71,6 +73,7 @@ export function createSpacetimeView(root: HTMLElement) {
     h('label', {}, 'Pattern ', patternSel),
     h('label', {}, 'Generations ', select(['60', '150', '300', '500'].map((v) => ({ value: v, label: v })), '150', (v) => { gens = +v; build(); })),
     h('label', {}, 'Colour ', select([{ value: '0', label: 'by time' }, { value: '1', label: 'by object' }], '0', (v) => (colorMode = +v))),
+    h('label', {}, 'Shape ', select([{ value: 'stones', label: 'Stones' }, { value: 'cubes', label: 'Cubes' }], 'stones', (v) => { shape = v as typeof shape; label(); })),
     h('button', { onclick: () => { reveal = 0; playing = true; } }, 'Replay'),
     toggle('Auto-rotate', true, (v) => (autoRotate = v)).el,
     h('div.space-slider', {}, slider('Layer spacing', 0.3, 3, 0.1, layerGap, (v) => (layerGap = v), (v) => v.toFixed(1)).el),
@@ -114,7 +117,13 @@ export function createSpacetimeView(root: HTMLElement) {
     reveal = 0;
     playing = true;
     renderer?.setInstances(data);
-    countEl.textContent = `${fmt(instanceCount)} stones`;
+    label();
+  }
+
+  /** The count, and a note when a history is too big to draw as stones. */
+  function label() {
+    const tooMany = shape === 'stones' && instanceCount > STONE_LIMIT;
+    countEl.textContent = `${fmt(instanceCount)} stones${tooMany ? ', drawn as cubes because there are so many' : ''}`;
   }
 
   let drag: { x: number; y: number; yaw: number; pitch: number } | null = null;
@@ -156,7 +165,7 @@ export function createSpacetimeView(root: HTMLElement) {
     ];
     const proj = perspective(0.8, canvas.width / Math.max(1, canvas.height), 0.5, cam.dist * 4 + 500);
     const viewM = lookAt(eye, [0, midY, 0], [0, 1, 0]);
-    renderer.draw(multiply(proj, viewM), { reveal, tMax, layerGap, fogFar: cam.dist * 2.2 + extent, colorMode });
+    renderer.draw(multiply(proj, viewM), { reveal, tMax, layerGap, fogFar: cam.dist * 2.2 + extent, colorMode, stones: shape === 'stones', eye });
     genEl.textContent = `Generation ${Math.floor(reveal)} of ${tMax}`;
   }
   requestAnimationFrame(frame);

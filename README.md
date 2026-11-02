@@ -19,10 +19,10 @@ It's a static site written in TypeScript and built with Vite. Everything runs in
 - **A real board.** The simulator draws the grid as a Go board. Cells sit on the intersections as slate and clamshell stones, and each generation's births alternate black and white like turns, so you can see how old a pattern is. Zoom out and the stones become flat cells, which keeps a 1,024 × 1,024 board fast. It renders with WebGL2 (Web Graphics Library 2) and falls back to a plain canvas.
 - **Lineage tree.** A family tree of every object in a pattern, laid out upward, radially or as a timeline.
 - **Ancestors.** Runs the board backwards to find every pattern that could have produced yours one generation earlier.
-- **3D spacetime and deep time.** Stack generations into a sculpture you can turn, or jump up to 2^50 generations ahead with Hashlife.
+- **3D spacetime and deep time.** Stack generations into a sculpture of Go stones you can turn, or jump up to 2^50 generations ahead with Hashlife.
 - **State-space trees.** Every configuration of a tiny board, and the cycle each one falls into.
 - **Rule atlas, evolution and puzzles.** Eighteen rules run side by side and get classified as they go. A genetic algorithm breeds rules that compute. Ten puzzles are checked by the engine.
-- **Duel.** Life for two players, a variant called Immigration. Your black stones play the computer's white over five rounds, at three levels.
+- **Duel.** Life for two players, a variant called Immigration. Your black stones play the computer's white over five rounds, at three levels, or a friend on the same device.
 - **Math and applications.** Nineteen sections of math with live charts, and eighteen running models of real systems.
 - **Daylight and Lamplight.** Light and dark colour modes that follow your system, or that you pick with the sun and moon button.
 - **Works everywhere.** The layout works on phones, every control can be reached with the keyboard, and reduced-motion settings are respected.
@@ -61,7 +61,7 @@ flowchart LR
 <!-- progress:start -->
 ![Progress by area](docs/media/progress.svg)
 
-**35 of 45 roadmap items done (78%).** Generated from the checklist below by `npm run progress`.
+**36 of 46 roadmap items done (78%).** Generated from the checklist below by `npm run progress`.
 
 | Area | Progress | Done | Up next |
 | --- | --- | --- | --- |
@@ -70,7 +70,7 @@ flowchart LR
 | Math | ▰▰▰▰▰▰▰▰▰▱ 89% | 8 / 9 | Glider synthesis: building patterns from colliding gliders |
 | Applications | ▰▰▰▰▰▰▰▰▱▱ 75% | 3 / 4 | Neural cellular automata that regrow an image |
 | Games and labs | ▰▰▰▰▰▰▰▰▱▱ 75% | 3 / 4 | A daily puzzle |
-| Apps and publishing | ▰▰▰▰▰▰▰▰▱▱ 79% | 11 / 14 | Intel Mac build; Code-signed installers |
+| Apps and publishing | ▰▰▰▰▰▰▰▰▱▱ 80% | 12 / 15 | Intel Mac build; Code-signed installers |
 <!-- progress:end -->
 
 ### Releases
@@ -90,6 +90,7 @@ timeline
   v8.1 : Step back and undo, puzzle play, one voice for figures
   v8.2 : A scroll story on a 3D Go board, a rule toy, live view cards
   v8.3 : Duel, Life for two players against the computer
+  v8.4 : Spacetime in Go stones, Duel with a friend
 ```
 
 Full details in [CHANGELOG.md](CHANGELOG.md).
@@ -152,6 +153,7 @@ Tick a box here and run `npm run progress` to redraw the bars above. CI fails if
 - [x] Step back in time and undo on the board; keyboard play and best scores in puzzles
 - [x] A scroll story on a 3D Go board for the home page, with a rule toy and live view cards
 - [x] Duel: two-player Immigration against a computer player at three levels
+- [x] Spacetime drawn in lit Go stones; Duel against a friend on the same device
 - [ ] Intel Mac build
 - [ ] Code-signed installers
 - [ ] Automatic updates in the desktop app
@@ -182,9 +184,9 @@ Pick a seed (or draw one in the simulator and press *Grow a lineage tree*). The 
 ![Lineage tree growing upward](docs/screenshots/lineage-tree.png)
 
 ### 3D spacetime
-Every live cell at every generation becomes a cube, with time running upward, drawn with WebGL2 instancing (hundreds of thousands of cubes in one draw call). Gliders become diagonal tubes, oscillators become braids and a methuselah like Acorn grows into a tree. Orbit, zoom, replay, colour by time or by object, and send any pattern from the simulator.
+Every live cell at every generation becomes a Go stone, with time running upward, so each generation is a layer of stones stacked on the one before. The stones are lit lens shapes with a highlight that follows the camera, drawn with WebGL2 instancing in one draw call. **Shape** switches to cubes, and very large sculptures (over 60,000 stones) are drawn as cubes automatically to stay smooth. Gliders become diagonal tubes, oscillators become braids and a methuselah like Acorn grows into a tree. Orbit, zoom, replay, colour by time or by object, and send any pattern from the simulator.
 
-![A Gosper glider gun in 3D spacetime, auto-rotating](docs/media/spacetime.gif)
+![A Gosper glider gun in 3D spacetime, built from Go stones and auto-rotating](docs/media/spacetime.gif)
 
 ### Deep time (Hashlife)
 A from-scratch implementation of Gosper's **Hashlife** algorithm: a hash-consed quadtree with memoised futures. Jump a glider gun to generation 2³² (4,294,967,296) in milliseconds, double the generation with one click, watch population against generation on a log–log chart, and see the tree level, unique node count and cache hit rate live. It is tested cell for cell against the direct engine.
@@ -217,9 +219,9 @@ Ten construction challenges, from "draw a still life" to "draw a period-3 oscill
 ![Puzzles](docs/screenshots/puzzles.png)
 
 ### Duel
-Life for two players, a variant called **Immigration** that Don Woods described in 1971. The rules are Conway's, but every stone belongs to a side. A surviving stone keeps its colour, and a new stone takes the colour of most of the three stones that made it. You play black against the computer's white on a 13-line board. Each round the two sides take turns placing three stones each, and then the board runs eight generations. After five rounds, whoever has more stones wins.
+Life for two players, a variant called **Immigration** that Don Woods described in 1971. The rules are Conway's, but every stone belongs to a side. A surviving stone keeps its colour, and a new stone takes the colour of most of the three stones that made it. You play black against the computer's white on a 13-line board, or set **Opponent** to *A friend on this device* and pass it back and forth, black against white. Each round the two sides take turns placing three stones each, and then the board runs eight generations. After five rounds, whoever has more stones wins.
 
-The computer tries each empty point near the stones, runs the board forward and keeps the move that leaves it furthest ahead. On **Easy** it picks loosely from the better half of those moves, on **Normal** it only looks at a sample of them, and on **Hard** it tries every one. The last stone before a run counts most, so the computer opens rounds 1, 3 and 5, which means you place the last stone of the game. With **Show where it ends up** on, pointing at a point shows faint stones where the board would finish after the run if you played there. Your record at each level is saved in the browser.
+The computer tries each empty point near the stones, runs the board forward and keeps the move that leaves it furthest ahead. On **Easy** it picks loosely from the better half of those moves, on **Normal** it only looks at a sample of them, and on **Hard** it tries every one. The last stone before a run counts most, so the computer opens rounds 1, 3 and 5, which means you place the last stone of the game. With **Show where it ends up** on, pointing at a point shows faint stones where the board would finish after the run if you played there. Your record against the computer at each level is saved in the browser; games against a friend don't count towards it.
 
 ![Duel against the computer](docs/screenshots/duel.png)
 
@@ -401,13 +403,13 @@ src/
   render/
     renderer.ts    the Go board shader (WebGL2) and its Canvas 2D fallback
     palettes.ts    stone colourings: turns, age, slate
-    spacetime.ts   instanced 3D spacetime renderer
+    spacetime.ts   instanced 3D spacetime renderer, in stones or cubes
     board3d.ts     the 3D Go board and lens-shaped stones for the home page story
   ui/
     homeView.ts    the home page and its live 19-line board
     homeStory.ts   the scroll story at the top of the home page
     homeSections.ts  the rule toy, the numbers and the view cards
-    duelView.ts    Duel against the computer
+    duelView.ts    Duel against the computer or a friend
     theme.ts       colour modes, and design tokens for canvas code
     icons.ts       the icon set (inline SVG on a 24-unit grid)
     ...            the other ten views, charts, demos and small DOM helpers

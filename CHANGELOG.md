@@ -1,5 +1,12 @@
 # Changelog
 
+## 8.4.0
+
+- **3D spacetime is built from Go stones.** Each generation is a layer of lit, lens-shaped stones, with a highlight that follows the camera, stacked on the one before. The default layer spacing is wider so the layers read apart, and the stones flatten if you squeeze the layers together. A new **Shape** control switches back to cubes, and sculptures of more than 60,000 stones are drawn as cubes automatically, with a note saying so.
+- **Duel against a friend.** Set Opponent to "A friend on this device" and two people take turns, black against white, on one screen. The status line names whose move it is, the preview shows the result for the side about to play, and these games stay out of your record against the computer.
+- Until you zoom, the spacetime camera now pulls back far enough to keep the top of a tall tower in view.
+- The README's spacetime animation shows the new stones.
+
 ## 8.3.0
 
 - **Duel**, a new view: Life for two players (Immigration). Black stones are yours and white the computer's. Each round both sides take turns placing three stones, then the board runs eight generations, and a newborn takes the colour of most of its parents. After five rounds, whoever has more stones wins. The computer plays at Easy, Normal or Hard by running each candidate move forward and comparing the stone counts. A preview shows faint stones where the board would end up if you played at the point you're aiming at. Your record at each level is kept in the browser, and the board plays fully from the keyboard.
