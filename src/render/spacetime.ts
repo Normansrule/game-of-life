@@ -3,8 +3,10 @@
  * cube at (x, t, y), drawn with WebGL2 instancing so hundreds of thousands
  * of cubes render in one draw call. Time runs upward.
  *
- * Drawn as stones on the board: matte slate voxels with plain diffuse
- * shading, older layers fading toward the board, and the newest layer in
+ * Each cell can be drawn as a lens-shaped Go stone (the default while the
+ * count is small enough) or as a cube, which stays fast for huge histories.
+ * Drawn as stones on the board: slate with diffuse shading and, for stones,
+ * a soft highlight, older layers fading toward the board, and the newest layer in
  * clamshell white. No glow. Colours come from the design tokens through
  * setColors(), which the view calls again whenever light/dark mode changes.
  */
@@ -73,7 +75,9 @@ uniform mat4 uViewProj;
 uniform float uReveal;
 uniform float uTMax;
 uniform float uLayerGap;
+uniform float uStones;
 out vec3 vNormal;
+out vec3 vWorld;
 out float vT;
 out float vHue;
 out float vDepth;
@@ -81,7 +85,10 @@ out float vFront;
 void main() {
   float t = aInst.y;
   float show = t <= uReveal ? 1.0 : 0.0;
-  vec3 p = aPos * 0.92 * show + vec3(aInst.x, t * uLayerGap, aInst.z);
+  // Stones keep their own height unless the layers are packed closer than a stone is thick.
+  vec3 scale = uStones > 0.5 ? vec3(1.0, min(1.0, uLayerGap * 0.92 / 0.38), 1.0) : vec3(0.92);
+  vec3 p = aPos * scale * show + vec3(aInst.x, t * uLayerGap, aInst.z);
+  vWorld = p;
   gl_Position = uViewProj * vec4(p, 1.0);
   vNormal = aNormal;
   vT = t / max(uTMax, 1.0);
@@ -97,7 +104,10 @@ in float vT;
 in float vHue;
 in float vDepth;
 in float vFront;
+in vec3 vWorld;
 uniform float uFogFar;
+uniform float uStones;
+uniform vec3 uEye;
 uniform vec3 uBg;
 uniform vec3 uBoard;
 uniform vec3 uSlate;
@@ -119,9 +129,37 @@ void main() {
   // The current generation is a layer of white stones.
   base = mix(base, uShell, smoothstep(0.8, 1.0, vFront));
   vec3 c = base * (0.62 + 0.45 * diff);
+  if (uStones > 0.5) {
+    // A polished stone catches the light: a broad sheen, a little sharper on the white ones.
+    vec3 v = normalize(uEye - vWorld);
+    float gloss = mix(14.0, 48.0, smoothstep(0.8, 1.0, vFront));
+    c += vec3(1.0, 0.97, 0.9) * 0.22 * pow(max(dot(normalize(vNormal), normalize(L + v)), 0.0), gloss);
+  }
   float fog = clamp(vDepth / uFogFar, 0.0, 1.0);
   o = vec4(mix(c, uBg, fog * fog * 0.6), 1.0);
 }`;
+
+/** A low-poly lens-shaped stone, 0.94 wide and 0.38 thick, as position + normal triangles. */
+function lens(lon = 18, lat = 8): Float32Array {
+  const a = 0.47, hh = 0.19;
+  const pt = (i: number, j: number) => {
+    const phi = (i / lat) * Math.PI, th = (j / lon) * Math.PI * 2;
+    const s = Math.sin(phi), c = Math.cos(phi);
+    const r = a * Math.pow(s, 0.8), y = hh * Math.sign(c) * Math.pow(Math.abs(c), 1.15);
+    const x = r * Math.cos(th), z = r * Math.sin(th);
+    const nx = x / (a * a), ny = y / (hh * hh), nz = z / (a * a), l = Math.hypot(nx, ny, nz) || 1;
+    return [x, y, z, nx / l, ny / l, nz / l];
+  };
+  const out: number[] = [];
+  for (let i = 0; i < lat; i++) for (let j = 0; j < lon; j++) {
+    const p = pt(i, j), q = pt(i + 1, j), r = pt(i, j + 1), w = pt(i + 1, j + 1);
+    out.push(...p, ...q, ...r, ...r, ...q, ...w);
+  }
+  return new Float32Array(out);
+}
+
+/** Above this many cells, stones would be too slow on ordinary GPUs and cubes are used instead. */
+export const STONE_LIMIT = 60000;
 
 function cube(): Float32Array {
   // 6 faces x 2 triangles x 3 vertices, each with position + normal.
@@ -142,6 +180,8 @@ export class SpacetimeRenderer {
   private gl: WebGL2RenderingContext;
   private prog: WebGLProgram;
   private vao: WebGLVertexArrayObject;
+  private stoneVao: WebGLVertexArrayObject;
+  private stoneVerts: number;
   private inst: WebGLBuffer;
   private count = 0;
   private u: Record<string, WebGLUniformLocation | null> = {};
@@ -163,7 +203,7 @@ export class SpacetimeRenderer {
     gl.linkProgram(p);
     if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p) ?? 'link');
     this.prog = p;
-    for (const n of ['uViewProj', 'uReveal', 'uTMax', 'uLayerGap', 'uFogFar', 'uBg', 'uBoard', 'uSlate', 'uShell', 'uCat', 'uColorMode']) this.u[n] = gl.getUniformLocation(p, n);
+    for (const n of ['uViewProj', 'uReveal', 'uTMax', 'uLayerGap', 'uFogFar', 'uBg', 'uBoard', 'uSlate', 'uShell', 'uCat', 'uColorMode', 'uStones', 'uEye']) this.u[n] = gl.getUniformLocation(p, n);
     this.vao = gl.createVertexArray()!;
     gl.bindVertexArray(this.vao);
     const vb = gl.createBuffer();
@@ -174,6 +214,21 @@ export class SpacetimeRenderer {
     gl.enableVertexAttribArray(1);
     gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 24, 12);
     this.inst = gl.createBuffer()!;
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.inst);
+    gl.enableVertexAttribArray(2);
+    gl.vertexAttribPointer(2, 4, gl.FLOAT, false, 16, 0);
+    gl.vertexAttribDivisor(2, 1);
+
+    this.stoneVao = gl.createVertexArray()!;
+    gl.bindVertexArray(this.stoneVao);
+    const sv = lens();
+    this.stoneVerts = sv.length / 6;
+    gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+    gl.bufferData(gl.ARRAY_BUFFER, sv, gl.STATIC_DRAW);
+    gl.enableVertexAttribArray(0);
+    gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 24, 0);
+    gl.enableVertexAttribArray(1);
+    gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 24, 12);
     gl.bindBuffer(gl.ARRAY_BUFFER, this.inst);
     gl.enableVertexAttribArray(2);
     gl.vertexAttribPointer(2, 4, gl.FLOAT, false, 16, 0);
@@ -194,7 +249,7 @@ export class SpacetimeRenderer {
     this.count = data.length / 4;
   }
 
-  draw(viewProj: Mat4, o: { reveal: number; tMax: number; layerGap: number; fogFar: number; colorMode: number }): void {
+  draw(viewProj: Mat4, o: { reveal: number; tMax: number; layerGap: number; fogFar: number; colorMode: number; stones?: boolean; eye?: number[] }): void {
     const gl = this.gl;
     gl.viewport(0, 0, this.canvas.width, this.canvas.height);
     const c = this.colors;
@@ -217,8 +272,11 @@ export class SpacetimeRenderer {
     for (let i = 0; i < 6; i++) cats.set(f(c.cats.length ? c.cats[i % c.cats.length] : c.slate), i * 3);
     gl.uniform3fv(this.u.uCat, cats);
     gl.uniform1i(this.u.uColorMode, o.colorMode);
-    gl.bindVertexArray(this.vao);
-    gl.drawArraysInstanced(gl.TRIANGLES, 0, 36, this.count);
+    const stones = !!o.stones && this.count <= STONE_LIMIT;
+    gl.uniform1f(this.u.uStones, stones ? 1 : 0);
+    gl.uniform3fv(this.u.uEye, o.eye ?? [0, 0, 0]);
+    gl.bindVertexArray(stones ? this.stoneVao : this.vao);
+    gl.drawArraysInstanced(gl.TRIANGLES, 0, stones ? this.stoneVerts : 36, this.count);
     gl.bindVertexArray(null);
   }
 }
