@@ -16,7 +16,7 @@ It's a static site written in TypeScript and built with Vite. Everything runs in
 ## Key features
 
 - **A story you scroll.** The website opens on a Go board in 3D. As you scroll, five stones drop onto it, the rule runs generation by generation, and then every generation is stacked into a tower you see from the side. Scroll back and it runs backwards.
-- **A real board.** The simulator draws the grid as a Go board. Cells sit on the intersections as slate and clamshell stones, and each generation's births alternate black and white like turns, so you can see how old a pattern is. Zoom out and the stones become flat cells, which keeps a 1,024 × 1,024 board fast. It renders with WebGL2 (Web Graphics Library 2) and falls back to a plain canvas.
+- **A real board.** The simulator draws the grid as a Go board. Cells sit on the intersections as slate and clamshell stones, and each generation's births alternate black and white like turns, so you can see how old a pattern is. Copy a link and whoever opens it gets your board, or turn on sound and hear the newborn stones. Zoom out and the stones become flat cells, which keeps a 1,024 × 1,024 board fast. It renders with WebGL2 (Web Graphics Library 2) and falls back to a plain canvas.
 - **Lineage tree.** A family tree of every object in a pattern, laid out upward, radially or as a timeline.
 - **Ancestors.** Runs the board backwards to find every pattern that could have produced yours one generation earlier.
 - **3D spacetime and deep time.** Stack generations into a sculpture of Go stones you can turn, or jump up to 2^50 generations ahead with Hashlife.
@@ -61,7 +61,7 @@ flowchart LR
 <!-- progress:start -->
 ![Progress by area](docs/media/progress.svg)
 
-**36 of 46 roadmap items done (78%).** Generated from the checklist below by `npm run progress`.
+**37 of 47 roadmap items done (79%).** Generated from the checklist below by `npm run progress`.
 
 | Area | Progress | Done | Up next |
 | --- | --- | --- | --- |
@@ -70,7 +70,7 @@ flowchart LR
 | Math | ▰▰▰▰▰▰▰▰▰▱ 89% | 8 / 9 | Glider synthesis: building patterns from colliding gliders |
 | Applications | ▰▰▰▰▰▰▰▰▱▱ 75% | 3 / 4 | Neural cellular automata that regrow an image |
 | Games and labs | ▰▰▰▰▰▰▰▰▱▱ 75% | 3 / 4 | A daily puzzle |
-| Apps and publishing | ▰▰▰▰▰▰▰▰▱▱ 80% | 12 / 15 | Intel Mac build; Code-signed installers |
+| Apps and publishing | ▰▰▰▰▰▰▰▰▱▱ 81% | 13 / 16 | Intel Mac build; Code-signed installers |
 <!-- progress:end -->
 
 ### Releases
@@ -91,6 +91,7 @@ timeline
   v8.2 : A scroll story on a 3D Go board, a rule toy, live view cards
   v8.3 : Duel, Life for two players against the computer
   v8.4 : Spacetime in Go stones, Duel with a friend
+  v8.5 : Board links, listening to the board
 ```
 
 Full details in [CHANGELOG.md](CHANGELOG.md).
@@ -154,6 +155,7 @@ Tick a box here and run `npm run progress` to redraw the bars above. CI fails if
 - [x] A scroll story on a 3D Go board for the home page, with a rule toy and live view cards
 - [x] Duel: two-player Immigration against a computer player at three levels
 - [x] Spacetime drawn in lit Go stones; Duel against a friend on the same device
+- [x] Links that open a board with your pattern on it, and sound for the board
 - [ ] Intel Mac build
 - [ ] Code-signed installers
 - [ ] Automatic updates in the desktop app
@@ -173,6 +175,8 @@ Tick a box here and run `npm run progress` to redraw the bars above. CI fails if
 - Wrapped or bounded worlds from 64 to 1,024 lines across, plus random and symmetric soups.
 - Live statistics: population, births, deaths, density and speed. It also spots when a pattern goes still, oscillates (and with what period) or dies out.
 - **RLE (run-length encoded) and plaintext import and export**, PNG screenshots and WebM **video recording**.
+- **Board links.** The link button copies an address with the pattern, its rule and its name inside it, such as `#sim/b3s23/bo$2bo$3o!/Glider`. Opening it shows that board, paused, so the person you sent it to sees the pattern before it runs. On a phone it opens the share sheet. Nothing is uploaded: the whole pattern is in the link, up to about 4,000 characters of RLE.
+- **Listen to the board** (L). Each generation, the newborn stones on screen play soft notes on a pentatonic scale: low on the left of the screen, high on the right, louder where more are born. A glider walks up or down the scale, a glider gun keeps a beat and a random soup shimmers. Only what you can see is heard, so zooming in on one corner isolates it.
 
 ### Lineage tree
 Pick a seed (or draw one in the simulator and press *Grow a lineage tree*). The app evolves it, splits the live cells into objects every generation and records which object each one came from. The result is drawn as a family tree, either **growing upward**, as a **radial** burst or as a **timeline**, on linear, √ or log time:
@@ -307,6 +311,7 @@ The site opens on the home page, and the top bar lists all twelve views. Your ch
 | + / − / 0 | Zoom in / out / fit |
 | C | Clear |
 | Esc | Stop placing a pattern |
+| L | Sound on / off |
 
 Right- or middle-drag pans with any tool, and Shift-click places a pattern again and again.
 
@@ -387,6 +392,7 @@ src/
     life.ts        grid engine (wrapped or bounded), ages and trails, sparse evolver
     rules.ts       B/S rule parsing and presets
     rle.ts         RLE + plaintext pattern formats
+    share.ts       board links: a pattern and its rule packed into the URL
     patterns.ts    pattern library and the 8 symmetries of the square
     objects.ts     object detection, canonical forms, period / speed detection
     lineage.ts     lineage tree builder
@@ -412,6 +418,7 @@ src/
     duelView.ts    Duel against the computer or a friend
     theme.ts       colour modes, and design tokens for canvas code
     icons.ts       the icon set (inline SVG on a 24-unit grid)
+    sound.ts       listening to the board with the Web Audio API
     ...            the other ten views, charts, demos and small DOM helpers
                    (the GA runs in evolveWorker.ts, the 4×4 census in boxWorker.ts)
 tests/             Vitest specs

@@ -2,12 +2,14 @@ import { type Cell, Life, bounds, normalize } from '../engine/life';
 import { RULE_PRESETS, parseRule, ruleToString } from '../engine/rules';
 import { PATTERNS, type PatternDef, getPattern, patternCells, transform } from '../engine/patterns';
 import { parsePlaintext, parseRLE, toRLE } from '../engine/rle';
+import { parseShare, shareFragment } from '../engine/share';
 import { PALETTES, getPalette } from '../render/palettes';
 import { type GridRenderer, type View, createRenderer } from '../render/renderer';
 import { drawChart } from './chart';
 import { fitCanvas, fmt, h, select, slider, toast, toggle } from './dom';
 import { type IconName, icon, setIcon } from './icons';
 import { emit, on } from './bus';
+import { BoardSound, birthBands } from './sound';
 import { drawThumb } from './thumb';
 import { alpha, boardTheme, onTheme, reducedMotion, tok } from './theme';
 
@@ -62,6 +64,8 @@ export function createSimulator(root: HTMLElement) {
   const backBtn = ib('Step back one generation (B or ←)', 'back', () => stepBack());
   const undoBtn = ib('Undo the last edit (Ctrl+Z)', 'undo', () => undo());
   const redoBtn = ib('Redo (Ctrl+Shift+Z)', 'redo', () => redo());
+  const sound = new BoardSound();
+  const soundBtn = h('button.icon', { title: 'Listen to the board (L)', 'aria-label': 'Listen to the board', 'aria-pressed': 'false', onclick: () => void toggleSound() }, icon('mute'));
   const toolbar = h(
     'div.toolbar',
     {},
@@ -82,6 +86,9 @@ export function createSimulator(root: HTMLElement) {
     h('span.sep'),
     ib('Random soup', 'dice', () => randomize()),
     ib('Clear (C)', 'clear', () => clearAll()),
+    h('span.sep'),
+    soundBtn,
+    ib('Copy a link to this board', 'link', () => void shareLink()),
   );
   const hud = h('div.hud');
   const stampHint = h('div.stamp-hint');
@@ -210,6 +217,7 @@ export function createSimulator(root: HTMLElement) {
       {},
       h('button', { onclick: () => importText() }, 'Load'),
       h('button', { onclick: () => exportRLE() }, 'Export RLE'),
+      h('button', { onclick: () => void shareLink() }, icon('link'), 'Copy link'),
       h('button', { onclick: () => screenshot() }, 'Save PNG'),
       recBtn,
     ),
@@ -383,6 +391,11 @@ export function createSimulator(root: HTMLElement) {
     } else past = [];
     const s = life.step();
     lastStepAt = performance.now();
+    if (sound.ready() && active) {
+      // Only what's on screen is heard: the visible columns, split into bands from low to high.
+      const hw = glCanvas.clientWidth / 2 / view.zoom, hh = glCanvas.clientHeight / 2 / view.zoom;
+      sound.play(birthBands(life.age, life.w, life.h, view.cx - hw, view.cx + hw, view.cy - hh, view.cy + hh));
+    }
     pop.push(s.population);
     births.push(s.births);
     deaths.push(s.deaths);
@@ -537,7 +550,8 @@ export function createSimulator(root: HTMLElement) {
     emit('navigate', { route });
   }
 
-  on('sim:load', ({ cells, name, rule }) => {
+  on('sim:load', ({ cells, name, rule }) => loadPattern(cells, name, rule));
+  function loadPattern(cells: Cell[], name: string, rule?: string, message = `Loaded ${name}`) {
     if (rule) setRule(rule);
     beforeEdit();
     life.clear();
@@ -549,8 +563,51 @@ export function createSimulator(root: HTMLElement) {
     snapshot = { cells: life.snapshot(), gen: 0 };
     setRunning(false);
     fit();
-    toast(`Loaded ${name}`);
-  });
+    seedName = name;
+    toast(message);
+  }
+
+  // ---------- links and sound ----------
+  async function shareLink() {
+    const cells = life.liveCells();
+    if (!cells.length) return toast('Place some stones first');
+    const named = seedName !== 'Your pattern' ? seedName : undefined;
+    const name = life.generation && named ? `${named}, generation ${life.generation}` : named;
+    const frag = shareFragment(cells, ruleToString(life.rule), name);
+    if (!frag) return toast('This board is too big for a link. Export RLE instead.');
+    const url = `${location.origin}${location.pathname}#${frag}`;
+    // On a phone the share sheet is the natural place; elsewhere, the clipboard.
+    if (navigator.share && matchMedia('(pointer: coarse)').matches) {
+      try { await navigator.share({ title: name ?? 'A Life Tree board', url }); return; } catch { /* cancelled: fall through to copying */ }
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      toast('Link copied. Whoever opens it gets this board.');
+    } catch {
+      rleBox.value = url;
+      toast('Link written to the Import / export box');
+    }
+  }
+
+  /** Opens a board link (#sim/b3s23/…), then tidies the address back to #sim. */
+  function loadFromHash() {
+    const s = parseShare(location.hash);
+    if (!s) return;
+    history.replaceState(null, '', '#sim');
+    // It opens paused, so whoever follows the link sees the pattern before it runs.
+    const name = s.name ?? 'a shared pattern';
+    loadPattern(s.cells, name, s.rule, `Opened ${name} from a link. Press play to run it.`);
+  }
+  window.addEventListener('hashchange', () => { if (active) loadFromHash(); });
+
+  async function toggleSound() {
+    if (sound.on) sound.disable();
+    else if (!(await sound.enable())) return toast('Sound is not available in this browser');
+    soundBtn.setAttribute('aria-pressed', String(sound.on));
+    soundBtn.classList.toggle('on', sound.on);
+    setIcon(soundBtn, sound.on ? 'sound' : 'mute');
+    if (sound.on) toast('Sound on: newborn stones play notes, low on the left of the screen, high on the right');
+  }
 
   function drawPatternThumbs() {
     const col = tok('--ink');
@@ -667,6 +724,7 @@ export function createSimulator(root: HTMLElement) {
     else if (k === '-') zoomBy(1 / 1.4);
     else if (k === '0') fit();
     else if (k === 'escape') endStamp();
+    else if (k === 'l') void toggleSound();
     else if (k === 'r') {
       if (stamp) stamp.rot = (stamp.rot + 1) % 4;
       else reset();
@@ -794,6 +852,9 @@ export function createSimulator(root: HTMLElement) {
       active = true;
       last = performance.now();
       requestAnimationFrame(() => {
+        // A board link frames its own pattern, so it replaces the opening view.
+        if (parseShare(location.hash)) fitted = true;
+        loadFromHash();
         draw();
         if (!thumbsDrawn) {
           drawPatternThumbs();
@@ -810,6 +871,7 @@ export function createSimulator(root: HTMLElement) {
     },
     deactivate() {
       active = false;
+      if (sound.on) void toggleSound();
     },
   };
 }

@@ -1,5 +1,11 @@
 # Changelog
 
+## 8.5.0
+
+- **Board links.** A new link button on the board, and Copy link under Import / export, copies an address that carries the pattern, its rule and its name, such as `#sim/b3s23/bo$2bo$3o!/Glider`. Opening it shows that board, paused and framed. On a phone it opens the share sheet. Nothing is uploaded, and boards too big for a link (over about 4,000 characters of RLE) say so and point to Export RLE.
+- **Listen to the board.** A sound button (or L) turns on soft plucked notes for the newborn stones on screen: low notes on the left, high on the right, on a pentatonic scale, louder where more are born. At most five notes sound per generation and about fourteen generations a second, and sound turns off when you leave the board.
+- Four tests for board links (79 in total).
+
 ## 8.4.0
 
 - **3D spacetime is built from Go stones.** Each generation is a layer of lit, lens-shaped stones, with a highlight that follows the camera, stacked on the one before. The default layer spacing is wider so the layers read apart, and the stones flatten if you squeeze the layers together. A new **Shape** control switches back to cubes, and sculptures of more than 60,000 stones are drawn as cubes automatically, with a note saying so.
