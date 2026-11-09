@@ -1,5 +1,11 @@
 # Changelog
 
+## 8.6.0
+
+- **Stones you can hear.** A speaker button in the top bar turns on sound effects. A stone placed on the main board, the home page, a puzzle or Duel clicks onto the wood, a stone taken off ticks, a solved puzzle or a won game gets a short rising chime, and a wrong answer or a lost game a soft low pair of notes. Every sound is synthesised with the Web Audio API, so there are no audio files, and each stone varies slightly. Off until you turn it on; the setting is remembered.
+- **Paper grain.** A faint grain sits behind every page, dark in Daylight and pale in Lamplight, under the content so boards and text stay crisp.
+- **Device mockups.** The README opens with Life Tree on a laptop and a phone, made from real screenshots.
+
 ## 8.5.0
 
 - **Board links.** A new link button on the board, and Copy link under Import / export, copies an address that carries the pattern, its rule and its name, such as `#sim/b3s23/bo$2bo$3o!/Glider`. Opening it shows that board, paused and framed. On a phone it opens the share sheet. Nothing is uploaded, and boards too big for a link (over about 4,000 characters of RLE) say so and point to Export RLE.

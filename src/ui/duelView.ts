@@ -14,6 +14,7 @@ import { fitCanvas, h, select, toggle } from './dom';
 import { icon } from './icons';
 import { alpha, onTheme, reducedMotion, tok } from './theme';
 import { CellPainter, drawBoardLines, drawStarPoints } from './thumb';
+import * as sfx from './sfx';
 
 const N = 13;
 const ROUNDS = 5;
@@ -157,6 +158,8 @@ export function createDuelView(root: HTMLElement) {
     board[i] = side;
     last = i;
     dropping.set(i, performance.now());
+    // The computer's stones land a little softer than a person's.
+    sfx.stone(side === 2 && opponent === 'cpu' ? 0.75 : 1);
     if (side === 1) placedYou++; else placedCpu++;
   }
 
@@ -202,6 +205,8 @@ export function createDuelView(root: HTMLElement) {
       persist();
     }
     wonAt = performance.now();
+    if (winner === 1 || (winner === 2 && opponent === 'friend')) sfx.chime(5);
+    else if (winner === 2) sfx.thud();
     const again = h('button.primary', { type: 'button', onclick: () => newGame() }, 'Play again', icon('arrow'));
     const friend = opponent === 'friend';
     const line =

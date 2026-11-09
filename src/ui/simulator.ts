@@ -12,6 +12,7 @@ import { emit, on } from './bus';
 import { BoardSound, birthBands } from './sound';
 import { drawThumb } from './thumb';
 import { alpha, boardTheme, onTheme, reducedMotion, tok } from './theme';
+import * as sfx from './sfx';
 
 type Tool = 'draw' | 'erase' | 'pan';
 
@@ -48,6 +49,7 @@ export function createSimulator(root: HTMLElement) {
   const births: number[] = [];
   const deaths: number[] = [];
   let hashes: number[] = [];
+  let lastClack = 0;
   let status = '';
   let measuredRate = 0;
 
@@ -641,6 +643,7 @@ export function createSimulator(root: HTMLElement) {
     if (stamp) {
       beforeEdit();
       for (const [x, y] of stampCells()) life.set(wx + x, wy + y, 1);
+      sfx.stone();
       seedName = life.population() === stamp.cells.length ? stamp.name : 'Your pattern';
       if (!e.shiftKey) endStamp();
       return;
@@ -650,6 +653,8 @@ export function createSimulator(root: HTMLElement) {
     painting = { value, last: [wx, wy] };
     seedName = 'Your pattern';
     life.set(wx, wy, value);
+    if (value) sfx.stone(); else sfx.lift();
+    lastClack = performance.now();
   });
   overlay.addEventListener('pointermove', (e) => {
     const p = local(e);
@@ -673,6 +678,9 @@ export function createSimulator(root: HTMLElement) {
       const [x0, y0] = painting.last;
       const [x1, y1] = hover;
       line(x0, y0, x1, y1, (x, y) => life.set(x, y, painting!.value));
+      // Dragging a line of stones clicks as it goes, but no faster than a hand could place them.
+      const now = performance.now();
+      if ((x0 !== x1 || y0 !== y1) && now - lastClack > 70) { lastClack = now; if (painting.value) sfx.stone(0.6); else sfx.lift(); }
       painting.last = hover;
     }
   });
