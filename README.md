@@ -11,6 +11,8 @@ In 1970 John Conway and his students worked out the Game of Life by hand, with s
 
 It's a static site written in TypeScript and built with Vite. Everything runs in your browser: there's no server and no account. It also installs as an offline app, and there's a desktop app built from the same code.
 
+![Life Tree on a laptop, showing a glider gun's spacetime built from Go stones, and on a phone, showing the home page](docs/media/devices.jpg)
+
 ![The home page: scrolling drops five stones onto a 3D Go board, runs them, and stacks every generation into a tower](docs/media/home.gif)
 
 ## Key features
@@ -24,6 +26,7 @@ It's a static site written in TypeScript and built with Vite. Everything runs in
 - **Rule atlas, evolution and puzzles.** Eighteen rules run side by side and get classified as they go. A genetic algorithm breeds rules that compute. Ten puzzles are checked by the engine.
 - **Duel.** Life for two players, a variant called Immigration. Your black stones play the computer's white over five rounds, at three levels, or a friend on the same device.
 - **Math and applications.** Nineteen sections of math with live charts, and eighteen running models of real systems.
+- **Stones you can hear.** Turn on sound effects with the speaker in the top bar and every stone you place clicks onto the wood, on the main board, the home page, the puzzles and Duel. A solved puzzle or a won game gets a short chime.
 - **Daylight and Lamplight.** Light and dark colour modes that follow your system, or that you pick with the sun and moon button.
 - **Works everywhere.** The layout works on phones, every control can be reached with the keyboard, and reduced-motion settings are respected.
 
@@ -61,7 +64,7 @@ flowchart LR
 <!-- progress:start -->
 ![Progress by area](docs/media/progress.svg)
 
-**37 of 47 roadmap items done (79%).** Generated from the checklist below by `npm run progress`.
+**38 of 48 roadmap items done (79%).** Generated from the checklist below by `npm run progress`.
 
 | Area | Progress | Done | Up next |
 | --- | --- | --- | --- |
@@ -70,7 +73,7 @@ flowchart LR
 | Math | ▰▰▰▰▰▰▰▰▰▱ 89% | 8 / 9 | Glider synthesis: building patterns from colliding gliders |
 | Applications | ▰▰▰▰▰▰▰▰▱▱ 75% | 3 / 4 | Neural cellular automata that regrow an image |
 | Games and labs | ▰▰▰▰▰▰▰▰▱▱ 75% | 3 / 4 | A daily puzzle |
-| Apps and publishing | ▰▰▰▰▰▰▰▰▱▱ 81% | 13 / 16 | Intel Mac build; Code-signed installers |
+| Apps and publishing | ▰▰▰▰▰▰▰▰▱▱ 82% | 14 / 17 | Intel Mac build; Code-signed installers |
 <!-- progress:end -->
 
 ### Releases
@@ -92,6 +95,7 @@ timeline
   v8.3 : Duel, Life for two players against the computer
   v8.4 : Spacetime in Go stones, Duel with a friend
   v8.5 : Board links, listening to the board
+  v8.6 : Stone sounds, paper grain, device mockups
 ```
 
 Full details in [CHANGELOG.md](CHANGELOG.md).
@@ -156,6 +160,7 @@ Tick a box here and run `npm run progress` to redraw the bars above. CI fails if
 - [x] Duel: two-player Immigration against a computer player at three levels
 - [x] Spacetime drawn in lit Go stones; Duel against a friend on the same device
 - [x] Links that open a board with your pattern on it, and sound for the board
+- [x] Stone sound effects on every board, a paper-grain surface and device mockups in the README
 - [ ] Intel Mac build
 - [ ] Code-signed installers
 - [ ] Automatic updates in the desktop app
@@ -419,6 +424,7 @@ src/
     theme.ts       colour modes, and design tokens for canvas code
     icons.ts       the icon set (inline SVG on a 24-unit grid)
     sound.ts       listening to the board with the Web Audio API
+    sfx.ts         synthesised stone, chime and thud sound effects
     ...            the other ten views, charts, demos and small DOM helpers
                    (the GA runs in evolveWorker.ts, the 4×4 census in boxWorker.ts)
 tests/             Vitest specs
@@ -441,6 +447,10 @@ The design is called **Common Room**, after the Cambridge maths common room wher
 **The home page.** The website opens with a scroll story, the way a product page does. A 3D board stays pinned while four chapters pass: the title, five stones dropping onto the board, the rule running, and every generation stacked into a tower. Your scroll position drives it all, so it goes backwards when you scroll up, and nothing plays on its own except a slow drift of the camera. With a mouse, a warm light follows the pointer across the wood and lifts the stones under it. Below the story are a board you can play on, a toy that shows the whole rule on nine points, four numbers that count up once, and a card for every view whose small board plays while you point at it. Without WebGL2 the story becomes ordinary paragraphs.
 
 **Motion.** Things that land use a spring. Moving between views cross-fades the page and lifts the new one a few pixels, where the browser supports view transitions. Placed stones, the star point under the tabs, the switches and the toasts all settle with a small overshoot, like a stone clicking onto the board. State changes use one strong ease-out and stay under 300 ms. Presses scale to 97%. Hover effects only apply to a mouse or trackpad. With reduced motion turned on, overshoot, movement and loops are switched off and fades remain: the home page camera holds one still view per chapter and stones appear without falling.
+
+**Sound.** Every sound is made in the browser with the Web Audio API, so there are no audio files to download or license. A stone landing is a very short filtered-noise click on top of a ringing knock (two quickly fading tones, the wood) and a soft low thump (the board's body), and each one varies a little in pitch and weight, as real stones do. Taking a stone off is a softer, higher tick, the computer's stones in Duel land a little more lightly than yours, and a dragged line of stones clicks no faster than a hand could place them. Sound effects are off until you turn them on, and the setting is remembered.
+
+**Surface.** A faint paper grain sits behind every page, dark grain in Daylight and pale in Lamplight, so large plain areas read as a surface rather than a flat fill. It sits underneath the content, so boards, charts and text stay crisp.
 
 **States.** A cleared board says what to do next and offers a random soup or a glider. A view that fails to start shows what happened and a reload button, and the rest of the app keeps working. Searches and long runs show three stones being placed in turn while they work.
 

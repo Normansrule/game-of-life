@@ -17,6 +17,7 @@ import { h } from './ui/dom';
 import { createHomeView } from './ui/homeView';
 import { icon } from './ui/icons';
 import { type Mode, getMode, initTheme, reducedMotion, setMode } from './ui/theme';
+import { onSfx, setSfx, sfxOn, stone as stoneSound } from './ui/sfx';
 
 initTheme();
 
@@ -144,6 +145,22 @@ modeBtn.addEventListener('click', () => {
   paintModeBtn();
 });
 paintModeBtn();
+
+// Sound effects: off until you turn them on. Turning them on plays one stone, so you hear what you chose.
+const sfxBtn = document.getElementById('sfx-btn')!;
+function paintSfxBtn() {
+  const on = sfxOn();
+  sfxBtn.replaceChildren(icon(on ? 'sound' : 'mute'));
+  sfxBtn.setAttribute('aria-pressed', String(on));
+  sfxBtn.setAttribute('aria-label', 'Sound effects');
+  sfxBtn.title = on ? 'Sound effects on (click to turn off)' : 'Sound effects off (click to turn on)';
+}
+sfxBtn.addEventListener('click', () => {
+  setSfx(!sfxOn());
+  if (sfxOn()) stoneSound();
+});
+onSfx(paintSfxBtn);
+paintSfxBtn();
 
 // The skip link moves focus without changing the hash, which would change the route.
 document.querySelector('.skip')?.addEventListener('click', (e) => { e.preventDefault(); app.focus(); });

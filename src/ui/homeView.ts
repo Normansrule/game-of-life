@@ -16,6 +16,7 @@ import { createStory } from './homeStory';
 import { numberBand, ruleToy, viewCards } from './homeSections';
 import { icon } from './icons';
 import { onTheme, reducedMotion, tok } from './theme';
+import * as sfx from './sfx';
 
 const N = 19;
 const GO_COLS = 'ABCDEFGHJKLMNOPQRST'; // Go boards skip the letter I
@@ -275,8 +276,8 @@ export function createHomeView(root: HTMLElement) {
   // ---------- input ----------
   function toggleAt(x: number, y: number) {
     const i = y * N + x;
-    if (alive[i]) { alive[i] = 0; lid++; }
-    else { alive[i] = 1; color[i] = gen % 2; p[i] = 0; v[i] = 0; delay[i] = 0; }
+    if (alive[i]) { alive[i] = 0; lid++; sfx.lift(); }
+    else { alive[i] = 1; sfx.stone(); color[i] = gen % 2; p[i] = 0; v[i] = 0; delay[i] = 0; }
     stats();
   }
   canvas.addEventListener('pointerdown', (e) => {

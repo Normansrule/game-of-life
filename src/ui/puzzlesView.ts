@@ -14,6 +14,7 @@ import { fitCanvas, h } from './dom';
 import { icon, setIcon } from './icons';
 import { alpha, onTheme, reducedMotion, tok } from './theme';
 import { CellPainter, drawBoardLines, drawStarPoints } from './thumb';
+import * as sfx from './sfx';
 
 const STORE = 'life-tree:puzzles:v1';
 const DIFF_COLOUR: Record<Difficulty, string> = { easy: 'var(--data-pine)', medium: 'var(--data-ochre)', hard: 'var(--data-shu)' };
@@ -174,7 +175,8 @@ export function createPuzzlesView(root: HTMLElement) {
       persist();
       renderList();
       celebrate = performance.now();
-    }
+      sfx.chime(first ? 5 : 3);
+    } else if (cells.size) sfx.thud();
     const next = v.ok ? PUZZLES.find((p) => !saved.solved.includes(p.id)) : undefined;
     verdict.replaceChildren(h(v.ok ? 'div.ok' : 'div.bad', {},
       lead,
@@ -320,7 +322,7 @@ export function createPuzzlesView(root: HTMLElement) {
   function set(c: Cell, on: boolean) {
     const k = key(c[0], c[1]);
     if (on === cells.has(k)) return;
-    if (on) { cells.add(k); dropping.set(k, performance.now()); } else { cells.delete(k); dropping.delete(k); }
+    if (on) { cells.add(k); dropping.set(k, performance.now()); sfx.stone(); } else { cells.delete(k); dropping.delete(k); sfx.lift(); }
   }
   function paint(c: Cell | null) {
     if (!c || painting === null) return;
