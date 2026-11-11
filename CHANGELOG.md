@@ -1,5 +1,12 @@
 # Changelog
 
+## 8.7.0
+
+- **Field guide.** A new tab with a card for each of the 27 classic patterns, each moving on its own small Go board. Every number on a card is measured by running the pattern: period, speed, heat, rotor and stator for the ones that repeat, gliders per period for the guns, and for the methuselahs the generation they settle, their peak, what they leave and how many gliders fly off, with a population sparkline. Filter by kind, open a pattern on the board, or link to a card (`#guide/acorn`).
+- **Faster, truer methuselah runs.** The fate runner can now take gliders away as soon as nothing lies ahead of them, instead of when they reach the edge. On a big field this finds the generation the rest settles (1,103 for the R-pentomino, 5,206 for the acorn) and keeps long runs fast.
+- **Tabs that don't fit fade at the edge**, so it's clear the row scrolls.
+- **Pattern notes checked.** The single-row growth pattern is 39 cells long with 28 alive, not 39 alive, and Rabbits' note now says "more than 17,000 generations": the engine measures 17,334, and the commonly quoted figure is 17,331.
+
 ## 8.6.0
 
 - **Stones you can hear.** A speaker button in the top bar turns on sound effects. A stone placed on the main board, the home page, a puzzle or Duel clicks onto the wood, a stone taken off ticks, a solved puzzle or a won game gets a short rising chime, and a wrong answer or a lost game a soft low pair of notes. Every sound is synthesised with the Web Audio API, so there are no audio files, and each stone varies slightly. Off until you turn it on; the setting is remembered.

@@ -11,6 +11,7 @@ import { createEvolveView } from './ui/evolveView';
 import { createPuzzlesView } from './ui/puzzlesView';
 import { createDuelView } from './ui/duelView';
 import { createAncestorsView } from './ui/ancestorsView';
+import { createGuideView } from './ui/guideView';
 import { on } from './ui/bus';
 import { setupGetApp } from './ui/getApp';
 import { h } from './ui/dom';
@@ -29,6 +30,7 @@ interface View {
 const routes: Record<string, (root: HTMLElement) => View> = {
   home: createHomeView,
   sim: createSimulator,
+  guide: createGuideView,
   lineage: createLineageView,
   basins: createBasinView,
   ancestors: createAncestorsView,
@@ -93,9 +95,20 @@ function swap(route: string) {
     else a.removeAttribute('aria-current');
   });
   placeTabDot();
+  requestAnimationFrame(fadeTabs);
   v.view.activate();
   window.scrollTo(0, 0);
 }
+
+// When the tabs don't all fit, fade the edge that has more behind it, so it reads as scrollable.
+const tabs = document.querySelector<HTMLElement>('.tabs')!;
+function fadeTabs() {
+  const more = tabs.scrollWidth - tabs.clientWidth;
+  tabs.classList.toggle('more-start', more > 1 && tabs.scrollLeft > 1);
+  tabs.classList.toggle('more-end', more > 1 && tabs.scrollLeft < more - 1);
+}
+tabs.addEventListener('scroll', fadeTabs, { passive: true });
+window.addEventListener('resize', fadeTabs);
 
 const routeFromHash = () => location.hash.slice(1).split('/')[0] || 'home';
 window.addEventListener('hashchange', () => show(routeFromHash()));

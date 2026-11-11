@@ -19,6 +19,7 @@ It's a static site written in TypeScript and built with Vite. Everything runs in
 
 - **A story you scroll.** The website opens on a Go board in 3D. As you scroll, five stones drop onto it, the rule runs generation by generation, and then every generation is stacked into a tower you see from the side. Scroll back and it runs backwards.
 - **A real board.** The simulator draws the grid as a Go board. Cells sit on the intersections as slate and clamshell stones, and each generation's births alternate black and white like turns, so you can see how old a pattern is. Copy a link and whoever opens it gets your board, or turn on sound and hear the newborn stones. Zoom out and the stones become flat cells, which keeps a 1,024 × 1,024 board fast. It renders with WebGL2 (Web Graphics Library 2) and falls back to a plain canvas.
+- **Field guide.** A card for each of the 27 classic patterns, moving on its own small board, with facts the engine measures by running it: period, speed and heat, rotor and stator, and how long each methuselah takes to settle and what it leaves.
 - **Lineage tree.** A family tree of every object in a pattern, laid out upward, radially or as a timeline.
 - **Ancestors.** Runs the board backwards to find every pattern that could have produced yours one generation earlier.
 - **3D spacetime and deep time.** Stack generations into a sculpture of Go stones you can turn, or jump up to 2^50 generations ahead with Hashlife.
@@ -64,11 +65,11 @@ flowchart LR
 <!-- progress:start -->
 ![Progress by area](docs/media/progress.svg)
 
-**38 of 48 roadmap items done (79%).** Generated from the checklist below by `npm run progress`.
+**40 of 49 roadmap items done (82%).** Generated from the checklist below by `npm run progress`.
 
 | Area | Progress | Done | Up next |
 | --- | --- | --- | --- |
-| Simulator | ▰▰▰▰▰▰▰▱▱▱ 71% | 5 / 7 | Share a pattern as a link; Load patterns straight from LifeWiki |
+| Simulator | ▰▰▰▰▰▰▰▰▰▱ 88% | 7 / 8 | Load patterns straight from LifeWiki |
 | Trees and time | ▰▰▰▰▰▰▰▱▱▱ 71% | 5 / 7 | Hashlife in a Web Worker for huge patterns; Export any tree as an SVG file |
 | Math | ▰▰▰▰▰▰▰▰▰▱ 89% | 8 / 9 | Glider synthesis: building patterns from colliding gliders |
 | Applications | ▰▰▰▰▰▰▰▰▱▱ 75% | 3 / 4 | Neural cellular automata that regrow an image |
@@ -96,6 +97,7 @@ timeline
   v8.4 : Spacetime in Go stones, Duel with a friend
   v8.5 : Board links, listening to the board
   v8.6 : Stone sounds, paper grain, device mockups
+  v8.7 : Field guide, every pattern measured
 ```
 
 Full details in [CHANGELOG.md](CHANGELOG.md).
@@ -111,7 +113,8 @@ Tick a box here and run `npm run progress` to redraw the bars above. CI fails if
 - [x] 27-pattern library, 12 rule presets and any B/S rule
 - [x] RLE and plaintext import and export
 - [x] PNG screenshots and WebM video recording
-- [ ] Share a pattern as a link
+- [x] Share a pattern as a link
+- [x] Field guide: a card for every pattern, with facts measured by the engine
 - [ ] Load patterns straight from LifeWiki
 
 #### Trees and time
@@ -182,6 +185,16 @@ Tick a box here and run `npm run progress` to redraw the bars above. CI fails if
 - **RLE (run-length encoded) and plaintext import and export**, PNG screenshots and WebM **video recording**.
 - **Board links.** The link button copies an address with the pattern, its rule and its name inside it, such as `#sim/b3s23/bo$2bo$3o!/Glider`. Opening it shows that board, paused, so the person you sent it to sees the pattern before it runs. On a phone it opens the share sheet. Nothing is uploaded: the whole pattern is in the link, up to about 4,000 characters of RLE.
 - **Listen to the board** (L). Each generation, the newborn stones on screen play soft notes on a pentatonic scale: low on the left of the screen, high on the right, louder where more are born. A glider walks up or down the scale, a glider gun keeps a beat and a random soup shimmers. Only what you can see is heard, so zooming in on one corner isolates it.
+
+### Field guide
+A card for each of the 27 patterns in the library, each one moving on its own small Go board: oscillators loop through their cycle, spaceships travel, guns fire a steady stream and methuselahs play their first 200 generations while the view pulls back. Filter by kind, open any pattern on the board, or link straight to a card, such as `#guide/acorn`.
+
+Nothing on a card is typed in by hand. Every number is measured by running the pattern:
+- **Repeating patterns:** period, speed, the range of stones over a cycle, heat (stones placed or taken off per generation) and the rotor and stator (points that change, and stones that never move).
+- **Guns:** the period, and the gliders fired per period.
+- **Methuselahs:** run to the end in a Web Worker on a 1,024 × 1,024 field, with a sparkline of the population. Gliders are taken away as soon as nothing lies ahead of them, so the run finds the generation the rest settles. It measures the R-pentomino at 1,103 generations with 6 gliders, the acorn at 5,206 with 13 and the diehard dying at 130, matching the well-known values. Rabbits takes about half a minute, so results are kept in your browser after the first visit.
+
+The tests check these numbers, so a change to the engine that broke one would fail CI.
 
 ### Lineage tree
 Pick a seed (or draw one in the simulator and press *Grow a lineage tree*). The app evolves it, splits the live cells into objects every generation and records which object each one came from. The result is drawn as a family tree, either **growing upward**, as a **radial** burst or as a **timeline**, on linear, √ or log time:
@@ -406,7 +419,8 @@ src/
     census.ts      seeded random soups and object census
     classify.ts    Wolfram-class rule classifier and Langton's λ
     evolve.ts      1D rules, GKL, and a genetic algorithm for density classification
-    exhaustive.ts  Burnside counts, D4 orbit representatives and a fate runner for small patterns
+    exhaustive.ts  Burnside counts, D4 orbit representatives and a fate runner that removes departing gliders
+    guide.ts       the field guide's measured facts: cycles, guns, growth and methuselah runs
     puzzles.ts     puzzle definitions and their automatic checkers
     immigration.ts two-colour Life for Duel, and the computer player
     predecessors.ts  backtracking parent search and the 3×3 preimage census
@@ -425,8 +439,10 @@ src/
     icons.ts       the icon set (inline SVG on a 24-unit grid)
     sound.ts       listening to the board with the Web Audio API
     sfx.ts         synthesised stone, chime and thud sound effects
+    guideView.ts   the field guide: animated cards and their facts
     ...            the other ten views, charts, demos and small DOM helpers
-                   (the GA runs in evolveWorker.ts, the 4×4 census in boxWorker.ts)
+                   (the GA runs in evolveWorker.ts, the 4×4 census in boxWorker.ts,
+                   the field guide's long runs in guideWorker.ts)
 tests/             Vitest specs
 scripts/           the progress tracker generator
 docs/              math, applications, the lineage-tree method, screenshots and the README GIFs (docs/media)
