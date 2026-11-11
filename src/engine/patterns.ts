@@ -46,7 +46,7 @@ export const PATTERNS: PatternDef[] = [
   { id: 'diehard', name: 'Diehard', category: 'Methuselah', rle: '6bo$2o$bo3b3o!', description: 'Vanishes completely after exactly 130 generations.' },
   { id: 'piheptomino', name: 'Pi-heptomino', category: 'Methuselah', rle: '3o$obo$obo!', description: 'A common, symmetric methuselah lasting 173 generations.' },
   { id: 'bheptomino', name: 'B-heptomino', category: 'Methuselah', rle: 'ob2o$3o$bo!', description: 'Settles after 148 generations; a key ingredient in many reactions.' },
-  { id: 'rabbits', name: 'Rabbits', category: 'Methuselah', rle: 'o3b3o$3o2bo$bo!', description: 'Nine cells that run for 17,331 generations.' },
+  { id: 'rabbits', name: 'Rabbits', category: 'Methuselah', rle: 'o3b3o$3o2bo$bo!', description: 'Nine cells that run for more than 17,000 generations.' },
 
   // Guns
   { id: 'gosper', name: 'Gosper glider gun', category: 'Gun', period: 30, rle: '24bo$22bobo$12b2o6b2o12b2o$11bo3bo4b2o12b2o$2o8bo5bo3b2o$2o8bo3bob2o4bobo$10bo5bo7bo$11bo3bo$12b2o!', description: 'The first known gun, proving that finite patterns can grow forever.', discovered: 'Bill Gosper, 1970' },
@@ -54,7 +54,7 @@ export const PATTERNS: PatternDef[] = [
 
   // Unbounded growth
   { id: 'switchengine', name: 'Infinite growth (10 cells)', category: 'Growth', rle: '6bo$4bob2o$4bobo$4bo$2bo$obo!', description: 'The smallest known pattern that grows without bound: a block-laying switch engine.', discovered: 'Paul Callahan, 1997' },
-  { id: 'line', name: 'Infinite growth (1 row)', category: 'Growth', rle: '8ob5o3b3o6b7ob5o!', description: 'A single row of 39 cells that grows forever.' },
+  { id: 'line', name: 'Infinite growth (1 row)', category: 'Growth', rle: '8ob5o3b3o6b7ob5o!', description: 'A single row, 39 cells long with 28 of them alive, that grows forever.' },
 ];
 
 const cache = new Map<string, Cell[]>();
