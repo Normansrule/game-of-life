@@ -1,5 +1,9 @@
 # Changelog
 
+## 8.8.0
+
+- **Daily puzzle.** The Puzzles tab opens on a new puzzle every day, the same for everyone and made from the date alone, so there's no server. The date seeds a search over small patterns in a 5×5 box, and the first one whose fate makes a good goal becomes the answer: keep changing for at least so many generations, vanish in exactly so many, or settle into exactly a given set of objects. Every daily puzzle is therefore solvable, and par is the number of stones the answer used. Solving keeps a streak of days in a row, and **Share your result** copies a line such as "Life Tree daily #1: solved with 5 stones (at par) ●●●●●" with a link, without giving the answer away. `#puzzles/daily` opens it.
+
 ## 8.7.0
 
 - **Field guide.** A new tab with a card for each of the 27 classic patterns, each moving on its own small Go board. Every number on a card is measured by running the pattern: period, speed, heat, rotor and stator for the ones that repeat, gliders per period for the guns, and for the methuselahs the generation they settle, their peak, what they leave and how many gliders fly off, with a population sparkline. Filter by kind, open a pattern on the board, or link to a card (`#guide/acorn`).

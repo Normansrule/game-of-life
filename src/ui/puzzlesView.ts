@@ -9,8 +9,9 @@
  */
 import { type Cell, evolveSparse } from '../engine/life';
 import { type Difficulty, PUZZLES, type Puzzle } from '../engine/puzzles';
+import { type Daily, dailyPuzzle, dateKey, shareText, streak } from '../engine/daily';
 import { emit } from './bus';
-import { fitCanvas, h } from './dom';
+import { fitCanvas, h, toast } from './dom';
 import { icon, setIcon } from './icons';
 import { alpha, onTheme, reducedMotion, tok } from './theme';
 import { CellPainter, drawBoardLines, drawStarPoints } from './thumb';
@@ -46,6 +47,9 @@ export function createPuzzlesView(root: HTMLElement) {
   const saved = loadSaved();
   const persist = () => { try { localStorage.setItem(STORE, JSON.stringify(saved)); } catch { /* private mode: progress lasts for this visit */ } };
 
+  // Today's puzzle, made from the date; remade when the view opens on a new day.
+  let daily: Daily = dailyPuzzle(dateKey());
+  const isDaily = (p: Puzzle): p is Daily => p.id.startsWith('daily-');
   let puzzle: Puzzle = PUZZLES[0];
   let cells = new Set<string>();
   let undoStack: string[][] = [];
@@ -66,6 +70,7 @@ export function createPuzzlesView(root: HTMLElement) {
   const progress = h('div.pz-progress');
   const title = h('h2');
   const chip = h('span.pz-chip');
+  const dailyLine = h('p.pz-daily-line', { hidden: true });
   const goal = h('p.pz-goal');
   const hint = h('p.pz-hint');
   const canvas = h('canvas.pz-canvas', {
@@ -84,11 +89,12 @@ export function createPuzzlesView(root: HTMLElement) {
   root.append(h('div.puzzles', {},
     h('header.view-head', {},
       h('h1', {}, 'Puzzles'),
-      h('p', {}, 'Ten construction challenges. Place stones on the board, press Check, and the same engine that runs the simulator decides whether your pattern does what the goal asks. Wrong answers are told what their pattern actually does, which is often the best clue. Solved one? Try again with fewer stones.')),
+      h('p', {}, 'Ten construction challenges, and a new one every day. Place stones on the board, press Check, and the same engine that runs the simulator decides whether your pattern does what the goal asks. Wrong answers are told what their pattern actually does, which is often the best clue. Solved one? Try again with fewer stones.')),
     h('div.pz-layout', {},
       h('aside', {}, progress, list),
       h('section.panel.pz-main', {},
         h('div.pz-head', {}, title, chip),
+        dailyLine,
         goal,
         canvas,
         h('div.pz-under', {}, count, info),
@@ -99,8 +105,19 @@ export function createPuzzlesView(root: HTMLElement) {
         hint,
         verdict))));
 
+  function dailyItem() {
+    const solved = saved.solved.includes(daily.id);
+    const day = Number(daily.date.slice(8));
+    const s = streak(saved.solved, daily.date);
+    return h(`button.pz-item.pz-daily${daily.id === puzzle.id ? '.active' : ''}${solved ? '.solved' : ''}`, { onclick: () => select(daily), 'aria-current': daily.id === puzzle.id ? 'true' : undefined, 'aria-label': `Daily puzzle number ${daily.number}${solved ? ', solved' : ''}` },
+      h('span.pz-num', {}, solved ? icon('check') : String(day)),
+      h('span', {}, h('b', {}, `Daily #${daily.number}`),
+        h('span.pz-meta', {},
+          s ? h('span.readout.dim', { title: 'Days in a row' }, `${s}-day streak`) : h('span.readout.dim', {}, `par ${daily.par}`))));
+  }
+
   function renderList() {
-    list.replaceChildren(...PUZZLES.map((p, i) => {
+    list.replaceChildren(dailyItem(), ...PUZZLES.map((p, i) => {
       const solved = saved.solved.includes(p.id);
       return h(`button.pz-item${p.id === puzzle.id ? '.active' : ''}${solved ? '.solved' : ''}`, { onclick: () => select(p), 'aria-current': p.id === puzzle.id ? 'true' : undefined, 'aria-label': `${i + 1}. ${p.title}, ${p.difficulty}${solved ? ', solved' : ''}` },
         h('span.pz-num', {}, solved ? icon('check') : String(i + 1)),
@@ -120,7 +137,9 @@ export function createPuzzlesView(root: HTMLElement) {
     undoStack = [];
     redoStack = [];
     cursor = null;
-    title.textContent = p.title;
+    title.textContent = isDaily(p) ? `Daily puzzle #${p.number}` : p.title;
+    dailyLine.hidden = !isDaily(p);
+    if (isDaily(p)) dailyLine.textContent = dailyText(p);
     chip.textContent = p.difficulty;
     chip.style.setProperty('--c', DIFF_COLOUR[p.difficulty]);
     goal.textContent = p.goal;
@@ -131,6 +150,12 @@ export function createPuzzlesView(root: HTMLElement) {
     renderList();
     resetView();
     draw();
+  }
+
+  function dailyText(p: Daily) {
+    const s = streak(saved.solved, p.date);
+    const when = new Date(`${p.date}T12:00:00`).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' });
+    return `${when}. Par is ${plural(p.par, 'stone')}.${s ? ` Your streak: ${plural(s, 'day')}.` : ''} A new puzzle comes at midnight.`;
   }
 
   function bestLine(id: string, lead: string) {
@@ -178,11 +203,30 @@ export function createPuzzlesView(root: HTMLElement) {
       sfx.chime(first ? 5 : 3);
     } else if (cells.size) sfx.thud();
     const next = v.ok ? PUZZLES.find((p) => !saved.solved.includes(p.id)) : undefined;
+    if (v.ok && isDaily(puzzle)) {
+      lead += cells.size < puzzle.par ? ` That's ${plural(puzzle.par - cells.size, 'stone')} under par.` : ' That matches par.';
+      dailyLine.textContent = dailyText(puzzle);
+    }
+    const daySolved = v.ok && isDaily(puzzle) ? puzzle : null;
     verdict.replaceChildren(h(v.ok ? 'div.ok' : 'div.bad', {},
       lead,
+      daySolved ? h('div.fig-controls', {}, h('button.primary', { onclick: () => void shareDaily(daySolved, cells.size) }, icon('link'), 'Share your result')) : '',
       next ? h('div.fig-controls', {}, h('button.primary', { onclick: () => select(next) }, `Next: ${next.title}`, icon('arrow'))) : '',
       !v.ok && cells.size ? h('div.fig-controls', {}, h('button', { onclick: play }, icon('play'), 'Watch what it does')) : ''));
     draw();
+  }
+
+  /** Copies a spoiler-free result line and a link to today's puzzle. */
+  async function shareDaily(p: Daily, stones: number) {
+    const text = shareText(p, stones);
+    const url = `${location.origin}${location.pathname}#puzzles/daily`;
+    if (navigator.share && matchMedia('(pointer: coarse)').matches) {
+      try { await navigator.share({ text, url }); return; } catch { /* cancelled: copy instead */ }
+    }
+    try {
+      await navigator.clipboard.writeText(`${text}\n${url}`);
+      toast('Result copied. It doesn\'t give the answer away.');
+    } catch { toast(text); }
   }
 
   function openInSim() {
@@ -381,9 +425,25 @@ export function createPuzzlesView(root: HTMLElement) {
   window.addEventListener('resize', () => active && draw());
   onTheme(draw);
 
-  select(PUZZLES.find((p) => !saved.solved.includes(p.id)) ?? PUZZLES[0]);
+  /** On a new day, swap in the new daily puzzle; #puzzles/daily opens it. */
+  function refreshDaily() {
+    const today = dateKey();
+    if (today === daily.date) return false;
+    const wasOn = isDaily(puzzle);
+    daily = dailyPuzzle(today);
+    if (wasOn) select(daily); else renderList();
+    return true;
+  }
+
+  select(saved.solved.includes(daily.id) ? PUZZLES.find((p) => !saved.solved.includes(p.id)) ?? daily : daily);
+  window.addEventListener('hashchange', () => { if (active && location.hash === '#puzzles/daily') select(daily); });
   return {
-    activate() { active = true; requestAnimationFrame(draw); },
+    activate() {
+      active = true;
+      refreshDaily();
+      if (location.hash === '#puzzles/daily' && puzzle.id !== daily.id) select(daily);
+      requestAnimationFrame(draw);
+    },
     deactivate() { active = false; },
   };
 }
