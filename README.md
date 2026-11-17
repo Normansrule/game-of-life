@@ -24,7 +24,7 @@ It's a static site written in TypeScript and built with Vite. Everything runs in
 - **Ancestors.** Runs the board backwards to find every pattern that could have produced yours one generation earlier.
 - **3D spacetime and deep time.** Stack generations into a sculpture of Go stones you can turn, or jump up to 2^50 generations ahead with Hashlife.
 - **State-space trees.** Every configuration of a tiny board, and the cycle each one falls into.
-- **Rule atlas, evolution and puzzles.** Eighteen rules run side by side and get classified as they go. A genetic algorithm breeds rules that compute. Ten puzzles are checked by the engine.
+- **Rule atlas, evolution and puzzles.** Eighteen rules run side by side and get classified as they go. A genetic algorithm breeds rules that compute. Ten puzzles, and a new one every day, are checked by the engine.
 - **Duel.** Life for two players, a variant called Immigration. Your black stones play the computer's white over five rounds, at three levels, or a friend on the same device.
 - **Math and applications.** Nineteen sections of math with live charts, and eighteen running models of real systems.
 - **Stones you can hear.** Turn on sound effects with the speaker in the top bar and every stone you place clicks onto the wood, on the main board, the home page, the puzzles and Duel. A solved puzzle or a won game gets a short chime.
@@ -65,7 +65,7 @@ flowchart LR
 <!-- progress:start -->
 ![Progress by area](docs/media/progress.svg)
 
-**40 of 49 roadmap items done (82%).** Generated from the checklist below by `npm run progress`.
+**41 of 49 roadmap items done (84%).** Generated from the checklist below by `npm run progress`.
 
 | Area | Progress | Done | Up next |
 | --- | --- | --- | --- |
@@ -73,7 +73,7 @@ flowchart LR
 | Trees and time | ▰▰▰▰▰▰▰▱▱▱ 71% | 5 / 7 | Hashlife in a Web Worker for huge patterns; Export any tree as an SVG file |
 | Math | ▰▰▰▰▰▰▰▰▰▱ 89% | 8 / 9 | Glider synthesis: building patterns from colliding gliders |
 | Applications | ▰▰▰▰▰▰▰▰▱▱ 75% | 3 / 4 | Neural cellular automata that regrow an image |
-| Games and labs | ▰▰▰▰▰▰▰▰▱▱ 75% | 3 / 4 | A daily puzzle |
+| Games and labs | ▰▰▰▰▰▰▰▰▰▰ 100% | 4 / 4 | all done |
 | Apps and publishing | ▰▰▰▰▰▰▰▰▱▱ 82% | 14 / 17 | Intel Mac build; Code-signed installers |
 <!-- progress:end -->
 
@@ -98,6 +98,7 @@ timeline
   v8.5 : Board links, listening to the board
   v8.6 : Stone sounds, paper grain, device mockups
   v8.7 : Field guide, every pattern measured
+  v8.8 : A daily puzzle
 ```
 
 Full details in [CHANGELOG.md](CHANGELOG.md).
@@ -147,7 +148,7 @@ Tick a box here and run `npm run progress` to redraw the bars above. CI fails if
 - [x] Rule atlas with live Wolfram classes
 - [x] Evolution lab with a genetic algorithm and family tree
 - [x] Ten puzzles checked by the engine
-- [ ] A daily puzzle
+- [x] A daily puzzle
 
 #### Apps and publishing
 - [x] Public GitHub repo with CI
@@ -237,6 +238,8 @@ A genetic algorithm, running in a Web Worker, breeds one-dimensional radius-3 ru
 
 ### Puzzles
 Ten construction challenges, from "draw a still life" to "draw a period-3 oscillator" and "make a pattern that vanishes after at least 100 generations". Place stones on a small Go board, press **Check**, and the engine runs your pattern and decides. A wrong answer is told what its pattern actually does (for example "That pattern dies out after 4 generations"), and **Watch it run** plays it in place, with black and white stones taking turns as on the main board. Each puzzle remembers the fewest stones you've solved it with, so there's a reason to go back. You can play entirely from the keyboard (arrows, Space, Enter), and undo or redo any move. Progress, drafts and best scores are saved in the browser.
+
+**Daily puzzle.** A new puzzle every day, the same for everyone, with no server. The date seeds a search over small patterns in a 5×5 box, and the first one whose fate makes a good goal becomes the day's answer. The goal is one of three kinds: keep changing for at least so many generations, vanish in exactly so many, or settle into exactly a given set of objects (for example "3 blocks and a blinker"). Because the goal is written from a real pattern, every daily puzzle can be solved, and par is the number of stones that pattern used. Solve it to keep your streak going, and share a result line that doesn't give the answer away. Link to it with `#puzzles/daily`.
 
 ![Puzzles](docs/screenshots/puzzles.png)
 
@@ -422,6 +425,7 @@ src/
     exhaustive.ts  Burnside counts, D4 orbit representatives and a fate runner that removes departing gliders
     guide.ts       the field guide's measured facts: cycles, guns, growth and methuselah runs
     puzzles.ts     puzzle definitions and their automatic checkers
+    daily.ts       the daily puzzle, made from the date, with streaks and a share line
     immigration.ts two-colour Life for Duel, and the computer player
     predecessors.ts  backtracking parent search and the 3×3 preimage census
     models/        sandpile, FHP gas, Wa-Tor, excitable medium, snowflakes, Lenia, Schelling, hodgepodge, traffic
