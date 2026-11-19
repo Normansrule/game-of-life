@@ -10,6 +10,8 @@ import {
 } from '../engine/basins';
 import { RULE_PRESETS } from '../engine/rules';
 import { fitCanvas, fmt, h, select } from './dom';
+import { icon } from './icons';
+import { asCanvas, downloadSvg, drawLegend, Svg2D, svgFileName } from './svgExport';
 import { alpha, onTheme, rgb, tok } from './theme';
 
 interface Group {
@@ -29,6 +31,8 @@ const SIZES = ['3x3', '3x4', '4x4', '3x5', '3x6'];
  * and transient states run from indigo (next to the cycle) to ochre (far out).
  */
 const NODE_TOKENS = { cycle: '--ink', eden: '--data-shu', near: '--data-indigo', far: '--data-ochre' };
+
+const LEGEND = [['cycle', 'Attractor cycle'], ['near', 'Close to the cycle'], ['far', 'Far from it'], ['eden', 'Garden of Eden']] as const;
 
 function depthColor(d: number, max: number): string {
   const t = max ? d / max : 0;
@@ -64,9 +68,10 @@ export function createBasinView(root: HTMLElement) {
     h('label', {}, 'Torus ', select(SIZES.map((s) => ({ value: s, label: s.replace('x', ' × ') + ` (${2 ** (+s[0] * +s[2])} states)` })), size, (v) => { size = v; compute(); })),
     h('label', {}, 'Rule ', select(RULE_PRESETS.filter((r) => !r.rule.startsWith('B0')).map((r) => ({ value: r.rule, label: `${r.name} (${r.rule})` })), rule, (v) => { rule = v; compute(); })),
     backBtn,
+    h('button.small', { title: 'Save what you see as an SVG file', onclick: () => exportSvg() }, icon('download'), 'Save SVG'),
     title,
     h('div.legend', {},
-      ...([['cycle', 'Attractor cycle'], ['near', 'Close to the cycle'], ['far', 'Far from it'], ['eden', 'Garden of Eden']] as const).map(([k, label]) =>
+      ...LEGEND.map(([k, label]) =>
         h('span', {}, h('i', { style: `background:var(${NODE_TOKENS[k]})` }), label),
       ),
     ),
@@ -164,6 +169,30 @@ export function createBasinView(root: HTMLElement) {
     const W = canvas.clientWidth, H = canvas.clientHeight;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, W, H);
+    paint(ctx, W, H);
+  }
+
+  /** Save what's on screen (every basin, or the one that's open) as an SVG file, with a key. */
+  function exportSvg() {
+    if (!space) return;
+    const W = canvas.clientWidth, H = canvas.clientHeight;
+    const svg = new Svg2D(W, H + 40);
+    const keep = hoverState;
+    hoverState = -1;
+    paint(asCanvas(svg), W, H);
+    hoverState = keep;
+    const ui = tok('--ui');
+    const what = mode === 'single' ? title.textContent ?? '' : `Every basin of attraction, largest first`;
+    svg.fillStyle = tok('--muted');
+    svg.font = `12px ${ui}`;
+    svg.textAlign = 'left';
+    svg.fillText(`${size.replace('x', ' × ')} torus, rule ${rule}. ${what}`, 12, H + 14);
+    drawLegend(svg, LEGEND.map(([k, label]) => ({ label, color: tok(NODE_TOKENS[k]) })), 12, H + 30, `11px ${ui}`, tok('--ink'));
+    const name = mode === 'single' ? `basin ${size} ${rule} ${groups[current].size} states` : `basins ${size} ${rule}`;
+    downloadSvg(svg.toString({ background: tok('--ground'), title: `State space of ${rule} on a ${size} torus` }), svgFileName(name));
+  }
+
+  function paint(ctx: CanvasRenderingContext2D, W: number, H: number) {
     if (!space) return;
     if (mode === 'single' && single) {
       const g = groups[current];
@@ -216,15 +245,30 @@ export function createBasinView(root: HTMLElement) {
     const cycleCol = tok(NODE_TOKENS.cycle), edenCol = tok(NODE_TOKENS.eden);
     // Nodes.
     const dot = detailed ? (n > 5000 ? 0.9 : n > 500 ? 1.6 : 3) : n > 500 ? 0.6 : 1.2;
+    // One path per colour, cycle states last so they sit on top: far fewer
+    // fills on screen, and far fewer elements in an exported SVG.
+    const byColour = new Map<string, number[]>();
+    const cycle: number[] = [];
     for (let i = 0; i < n; i++) {
       const st = l.nodes[i];
-      const goe = !s.indeg[st];
-      ctx.fillStyle = s.onCycle[st] ? cycleCol : goe ? edenCol : ramp[s.depth[st]];
-      const r = s.onCycle[st] ? dot * 2.2 + 1 : dot;
-      ctx.beginPath();
-      ctx.arc(cx + l.x[i] * R, cy + l.y[i] * R, r, 0, Math.PI * 2);
-      ctx.fill();
+      if (s.onCycle[st]) { cycle.push(i); continue; }
+      const col = !s.indeg[st] ? edenCol : ramp[s.depth[st]];
+      let list = byColour.get(col);
+      if (!list) byColour.set(col, (list = []));
+      list.push(i);
     }
+    const dots = (col: string, list: number[], r: number) => {
+      ctx.fillStyle = col;
+      ctx.beginPath();
+      for (const i of list) {
+        const x = cx + l.x[i] * R, y = cy + l.y[i] * R;
+        ctx.moveTo(x + r, y);
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+      }
+      ctx.fill();
+    };
+    for (const [col, list] of byColour) dots(col, list, dot);
+    dots(cycleCol, cycle, dot * 2.2 + 1);
     if (detailed) {
       lastPositions = { l, cx, cy, R };
       if (hoverState >= 0) {

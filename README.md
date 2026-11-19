@@ -65,12 +65,12 @@ flowchart LR
 <!-- progress:start -->
 ![Progress by area](docs/media/progress.svg)
 
-**41 of 49 roadmap items done (84%).** Generated from the checklist below by `npm run progress`.
+**42 of 49 roadmap items done (86%).** Generated from the checklist below by `npm run progress`.
 
 | Area | Progress | Done | Up next |
 | --- | --- | --- | --- |
 | Simulator | ▰▰▰▰▰▰▰▰▰▱ 88% | 7 / 8 | Load patterns straight from LifeWiki |
-| Trees and time | ▰▰▰▰▰▰▰▱▱▱ 71% | 5 / 7 | Hashlife in a Web Worker for huge patterns; Export any tree as an SVG file |
+| Trees and time | ▰▰▰▰▰▰▰▰▰▱ 86% | 6 / 7 | Hashlife in a Web Worker for huge patterns |
 | Math | ▰▰▰▰▰▰▰▰▰▱ 89% | 8 / 9 | Glider synthesis: building patterns from colliding gliders |
 | Applications | ▰▰▰▰▰▰▰▰▱▱ 75% | 3 / 4 | Neural cellular automata that regrow an image |
 | Games and labs | ▰▰▰▰▰▰▰▰▰▰ 100% | 4 / 4 | all done |
@@ -99,6 +99,7 @@ timeline
   v8.6 : Stone sounds, paper grain, device mockups
   v8.7 : Field guide, every pattern measured
   v8.8 : A daily puzzle
+  v8.9 : Save any tree as an SVG file
 ```
 
 Full details in [CHANGELOG.md](CHANGELOG.md).
@@ -125,7 +126,7 @@ Tick a box here and run `npm run progress` to redraw the bars above. CI fails if
 - [x] Hashlife deep time to 2^32 generations and beyond
 - [x] Ancestors: parent search and a family tree back in time
 - [ ] Hashlife in a Web Worker for huge patterns
-- [ ] Export any tree as an SVG file
+- [x] Export any tree as an SVG file
 
 #### Math
 - [x] Mean-field theory, entropy, damage spreading, speed of light
@@ -202,7 +203,8 @@ Pick a seed (or draw one in the simulator and press *Grow a lineage tree*). The 
 - forks are **splits**, joins are **collisions**, branch ends are **deaths**;
 - surviving leaves are labelled with the object they became (Block, Beehive, Blinker, Glider…);
 - click a branch to highlight its full ancestry and descendants and scrub through the evolution with the rest of the board faded out;
-- a summary and final census (the R-pentomino gives exactly the known 8 blocks, 6 gliders, 4 beehives, 4 blinkers, a boat, a loaf and a ship).
+- a summary and final census (the R-pentomino gives exactly the known 8 blocks, 6 gliders, 4 beehives, 4 blinkers, a boat, a loaf and a ship);
+- **Save SVG** saves the tree as you see it, with its zoom and highlight, a caption and a colour key, as a vector file.
 
 ![Lineage tree growing upward](docs/screenshots/lineage-tree.png)
 
@@ -217,12 +219,12 @@ A from-scratch implementation of Gosper's **Hashlife** algorithm: a hash-consed 
 ![A glider gun after 2^30 generations](docs/screenshots/deep-time.png)
 
 ### State-space trees
-On a tiny torus (3×3 up to 3×6, up to 262,144 states) the app computes the successor of **every** configuration and draws the **basins of attraction**: each attractor cycle with the trees of states that flow into it (the "basin of attraction field" popularised by DDLab). Hover any state to see it and its trajectory; Garden of Eden states (no predecessor) are highlighted.
+On a tiny torus (3×3 up to 3×6, up to 262,144 states) the app computes the successor of **every** configuration and draws the **basins of attraction**: each attractor cycle with the trees of states that flow into it (the "basin of attraction field" popularised by DDLab). Hover any state to see it and its trajectory; Garden of Eden states (no predecessor) are highlighted. **Save SVG** saves the whole field, or the basin you've opened, with a key.
 
 ![Basins of attraction on a 4×4 torus](docs/screenshots/basins.png)
 
 ### Ancestors
-Life run backwards. Draw a pattern and a backtracking search finds every **parent** in a box around it: every pattern that becomes exactly yours one generation later (a glider has 79 in a 5×5 box). Click a parent to search for its parents, and a family tree grows back in time; **Rewind** follows the smallest parent several generations at once. When nothing is found the page says so honestly: no parent of that size exists, which is not yet a proof of a Garden of Eden.
+Life run backwards. Draw a pattern and a backtracking search finds every **parent** in a box around it: every pattern that becomes exactly yours one generation later (a glider has 79 in a 5×5 box). Click a parent to search for its parents, and a family tree grows back in time; **Rewind** follows the smallest parent several generations at once. When nothing is found the page says so honestly: no parent of that size exists, which is not yet a proof of a Garden of Eden. **Save SVG** lays the family tree out as a clean figure, one column per generation, whatever the size of your window.
 
 ![Ancestors: rewinding a glider, one generation at a time](docs/media/ancestors.gif)
 
@@ -232,7 +234,7 @@ Conway's rule is one of 262,144 Life-like rules. The atlas runs 18 at a time fro
 ![Rule atlas: 18 rules running and being classified live](docs/media/atlas.gif)
 
 ### Evolution
-A genetic algorithm, running in a Web Worker, breeds one-dimensional radius-3 rules (128-bit tables) for the **density classification task**: a ring of 149 cells must reach all 1s if most cells started as 1, and all 0s otherwise, using only local rules. Watch the fitness climb through the epochs Mitchell, Crutchfield and Das described, compare the champion's space–time diagram with the hand-designed **GKL** rule, and follow the champion's **family tree**: a phylogeny in which every surviving rule is a life line and the champion's main line of descent is highlighted back to the founding generation.
+A genetic algorithm, running in a Web Worker, breeds one-dimensional radius-3 rules (128-bit tables) for the **density classification task**: a ring of 149 cells must reach all 1s if most cells started as 1, and all 0s otherwise, using only local rules. Watch the fitness climb through the epochs Mitchell, Crutchfield and Das described, compare the champion's space–time diagram with the hand-designed **GKL** rule, and follow the champion's **family tree**: a phylogeny in which every surviving rule is a life line and the champion's main line of descent is highlighted back to the founding generation. The family tree can be saved as an SVG file too.
 
 ![A genetic algorithm evolving a density classifier](docs/media/evolve.gif)
 
@@ -441,6 +443,7 @@ src/
     duelView.ts    Duel against the computer or a friend
     theme.ts       colour modes, and design tokens for canvas code
     icons.ts       the icon set (inline SVG on a 24-unit grid)
+    svgExport.ts   Svg2D, a stand-in canvas context that writes SVG, so every tree saves as a vector file
     sound.ts       listening to the board with the Web Audio API
     sfx.ts         synthesised stone, chime and thud sound effects
     guideView.ts   the field guide: animated cards and their facts

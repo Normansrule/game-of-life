@@ -852,3 +852,8 @@ button.rt-pt:nth-child(5) i { background: radial-gradient(circle at 35% 30%, #ff
 /* Long inline formulas and wide tables scroll inside their own block on phones instead of widening the page. */
 .prose p, .prose li { overflow-x: auto; overflow-y: hidden; }
 table.data, .mini-table { display: block; overflow-x: auto; max-width: 100%; }
+
+/* A panel heading with an action beside it (Save SVG). */
+.panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.panel-head h3 { margin-bottom: 0; }
+.panel-head + * { margin-top: 10px; }
