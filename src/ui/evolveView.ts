@@ -11,6 +11,8 @@ import { drawChart } from './chart';
 import { fitCanvas, h, select } from './dom';
 import { type Command, type GenMessage, createRunner } from './gaRunner';
 import { sampleRamp } from '../render/palettes';
+import { icon } from './icons';
+import { asCanvas, downloadSvg, Svg2D, svgFileName } from './svgExport';
 import { alpha, onTheme, rgb, tok } from './theme';
 
 const N = 149;
@@ -37,6 +39,7 @@ export function createEvolveView(root: HTMLElement) {
   const stats = { gen: h('b', {}, '0'), best: h('b', {}, '—'), mean: h('b', {}, '—'), perf: h('b', {}, '—'), lambda: h('b', {}, '—'), ms: h('b', {}, '—') };
   const fitChart = h('canvas.chart.tall');
   const treeCanvas = h('canvas.evo-tree');
+  const treeSave = h('button.small', { title: 'Save the family tree as an SVG file', onclick: () => exportTree() }, icon('download'), 'Save SVG');
   const champST = h('canvas.evo-st', { width: N, height: T });
   const gklST = h('canvas.evo-st', { width: N, height: T });
   const champVerdict = h('div.evo-verdict');
@@ -68,7 +71,7 @@ export function createEvolveView(root: HTMLElement) {
           h('p.small.dim', {}, 'Time runs down; each row is the ring at one step, from the same random start. Look for the strategy: the early "block-expanding" rules grow solid blocks of the colour they guess; the best rules send "particles" (diagonal boundaries) that carry information across the ring and cancel each other out.'),
           h('div.small', {}, 'Champion rule table (hex): ', hexEl)),
       ),
-      h('section.panel.evo-tree-panel', {}, h('h3', {}, "The champion's family tree"),
+      h('section.panel.evo-tree-panel', {}, h('div.panel-head', {}, h('h3', {}, "The champion's family tree"), treeSave),
         h('p.small.dim', {}, 'A phylogeny of rules. Each horizontal line is one rule, from the generation it was born to the last generation it survived selection (coloured by fitness, red through ochre to green). Curves join a child to its two parents. The champion is blue and its main line of descent (always through the parent that gave it most of its rule table) is drawn in heavy ink: follow it left to see the chain of crossovers and mutations that built it. Only rules that survived at least one round of selection are drawn.'),
         treeCanvas),
     ),
@@ -229,6 +232,20 @@ export function createEvolveView(root: HTMLElement) {
     const dpr = treeCanvas.width / Math.max(1, treeCanvas.clientWidth);
     const W = treeCanvas.clientWidth, H = treeCanvas.clientHeight;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    paintTree(ctx, W, H);
+  }
+
+  /** Save the family tree as an SVG file. */
+  function exportTree() {
+    if (gens.length < 2) return;
+    const W = treeCanvas.clientWidth, H = treeCanvas.clientHeight;
+    const svg = new Svg2D(W, H);
+    paintTree(asCanvas(svg), W, H);
+    const title = `Family tree of an evolved density classifier, ${gens.length} generations`;
+    downloadSvg(svg.toString({ title }), svgFileName(`rule family tree ${gens.length} generations`));
+  }
+
+  function paintTree(ctx: CanvasRenderingContext2D, W: number, H: number) {
     ctx.fillStyle = tok('--ground');
     ctx.fillRect(0, 0, W, H);
     if (gens.length < 2) {

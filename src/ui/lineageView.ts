@@ -6,6 +6,7 @@ import { fitCanvas, fmt, h, select, toast } from './dom';
 import { icon, setIcon } from './icons';
 import { emit, on } from './bus';
 import { CellPainter, drawBoardLines, drawThumb } from './thumb';
+import { asCanvas, downloadSvg, drawLegend, Svg2D, svgFileName } from './svgExport';
 import { alpha, onTheme, tok } from './theme';
 
 type Mode = 'tree' | 'radial' | 'timeline';
@@ -28,6 +29,7 @@ const KIND_TOKENS: Record<string, string> = {
   reaction: '--ink',
 };
 const kindColor = (k: string) => tok(KIND_TOKENS[k] ?? KIND_TOKENS.unknown);
+const LEGEND: Record<string, string> = { reaction: 'Reaction', 'still life': 'Still life', oscillator: 'Oscillator', spaceship: 'Spaceship', died: 'Died', unknown: 'Unclassified' };
 
 export function createLineageView(root: HTMLElement) {
   let result: LineageResult | null = null;
@@ -132,8 +134,9 @@ export function createLineageView(root: HTMLElement) {
     genSel,
     modeSel,
     scaleSel,
+    h('button.small', { title: 'Save the tree as it is on screen as an SVG file', onclick: () => exportTree() }, icon('download'), 'Save SVG'),
     h('div.legend', {},
-      ...Object.entries({ reaction: 'Reaction', 'still life': 'Still life', oscillator: 'Oscillator', spaceship: 'Spaceship', died: 'Died', unknown: 'Unclassified' }).map(([k, label]) =>
+      ...Object.entries(LEGEND).map(([k, label]) =>
         h('span', {}, h('i', { style: `background:var(${KIND_TOKENS[k]})` }), label),
       ),
     ),
@@ -268,6 +271,26 @@ export function createLineageView(root: HTMLElement) {
     const W = treeCanvas.clientWidth, H = treeCanvas.clientHeight;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, W, H);
+    paintTree(ctx, W, H, true);
+  }
+
+  /** Save the tree as it is on screen (same layout, zoom and highlight) as an SVG file, with a key. */
+  function exportTree() {
+    if (!result || !layout) return;
+    const W = treeCanvas.clientWidth, H = treeCanvas.clientHeight;
+    const svg = new Svg2D(W, H + 40);
+    paintTree(asCanvas(svg), W, H, false);
+    const ui = tok('--ui');
+    svg.fillStyle = tok('--muted');
+    svg.font = `12px ${ui}`;
+    svg.textAlign = 'left';
+    svg.fillText(`${seedName}: ${result.generations.toLocaleString('en-GB')} generations, drawn as a ${mode === 'tree' ? 'tree' : mode === 'radial' ? 'radial tree' : 'timeline'}`, 12, H + 14);
+    drawLegend(svg, Object.entries(LEGEND).map(([k, label]) => ({ label, color: kindColor(k) })), 12, H + 30, `11px ${ui}`, tok('--ink'));
+    const title = `${seedName} lineage tree`;
+    downloadSvg(svg.toString({ background: tok('--ground'), title }), svgFileName(title));
+  }
+
+  function paintTree(ctx: CanvasRenderingContext2D, W: number, H: number, cursor: boolean) {
     if (!result || !layout) return;
     const segs = result.segments;
     const u = layout.u;
@@ -377,7 +400,8 @@ export function createLineageView(root: HTMLElement) {
       }
     }
 
-    // Current-generation cursor.
+    // Current-generation cursor (on screen only: an exported tree shows the whole run).
+    if (!cursor) return;
     ctx.strokeStyle = alpha('--ink', 0.55);
     ctx.setLineDash([4, 4]);
     ctx.lineWidth = 1;

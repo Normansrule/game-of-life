@@ -12,14 +12,14 @@ export function colour(c: string | undefined, fallback = '--slate'): string {
 }
 
 /**
- * Collects live cells into one path and fills them in a single call: stones
- * (radius 0.46 of a cell, with a faint offset shadow) when cells are big
- * enough, flat squares otherwise.
+ * Collects live cells and fills them in a single path: stones (radius 0.46
+ * of a cell, with a faint offset shadow) when cells are big enough, flat
+ * squares otherwise. The path is traced on the context itself, so the same
+ * painter draws on a canvas or into an SVG export (Svg2D).
  */
 export class CellPainter {
   readonly stones: boolean;
-  private body = new Path2D();
-  private shade = new Path2D();
+  private pts: number[] = [];
   private r: number;
   private sq: number;
   constructor(private s: number) {
@@ -29,22 +29,29 @@ export class CellPainter {
   }
   /** Add a cell whose top-left corner is at (x, y) in px. */
   add(x: number, y: number): void {
-    if (this.stones) {
-      const cx = x + this.s / 2, cy = y + this.s / 2, r = this.r;
-      this.body.moveTo(cx + r, cy);
-      this.body.arc(cx, cy, r, 0, Math.PI * 2);
-      const dx = this.s * 0.05, dy = this.s * 0.08;
-      this.shade.moveTo(cx + dx + r, cy + dy);
-      this.shade.arc(cx + dx, cy + dy, r, 0, Math.PI * 2);
-    } else this.body.rect(x, y, this.sq, this.sq);
+    this.pts.push(x, y);
+  }
+  private trace(ctx: CanvasRenderingContext2D, dx: number, dy: number): void {
+    ctx.beginPath();
+    const { s, r, pts } = this;
+    for (let i = 0; i < pts.length; i += 2) {
+      if (this.stones) {
+        const cx = pts[i] + s / 2 + dx, cy = pts[i + 1] + s / 2 + dy;
+        ctx.moveTo(cx + r, cy);
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      } else ctx.rect(pts[i], pts[i + 1], this.sq, this.sq);
+    }
   }
   fill(ctx: CanvasRenderingContext2D, color?: string, shadow = true): void {
+    if (!this.pts.length) return;
     if (this.stones && shadow) {
       ctx.fillStyle = alpha('--slate', 0.25);
-      ctx.fill(this.shade);
+      this.trace(ctx, this.s * 0.05, this.s * 0.08);
+      ctx.fill();
     }
     ctx.fillStyle = colour(color);
-    ctx.fill(this.body);
+    this.trace(ctx, 0, 0);
+    ctx.fill();
   }
 }
 
@@ -77,20 +84,25 @@ export function drawThumb(canvas: HTMLCanvasElement, cells: Cell[], color: strin
   const ctx = canvas.getContext('2d')!;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, W, H);
+  paintThumb(ctx, cells, 0, 0, W, H, color, bg, pad);
+}
+
+/** Draw a pattern scaled to fit the box at (x, y), W × H px, on any 2D context. */
+export function paintThumb(ctx: CanvasRenderingContext2D, cells: Cell[], x: number, y: number, W: number, H: number, color: string = '--slate', bg = 'transparent', pad = 2, shadow = bg !== 'transparent'): void {
   if (bg !== 'transparent') {
     ctx.fillStyle = colour(bg);
-    ctx.fillRect(0, 0, W, H);
+    ctx.fillRect(x, y, W, H);
   }
   const b = bounds(cells);
   if (!b) return;
   const cw = b.x1 - b.x0 + 1;
   const ch = b.y1 - b.y0 + 1;
   const s = Math.min((W - pad * 2) / cw, (H - pad * 2) / ch, 14);
-  const ox = (W - cw * s) / 2;
-  const oy = (H - ch * s) / 2;
+  const ox = x + (W - cw * s) / 2;
+  const oy = y + (H - ch * s) / 2;
   const p = new CellPainter(s);
-  for (const [x, y] of cells) p.add(ox + (x - b.x0) * s, oy + (y - b.y0) * s);
-  p.fill(ctx, color, bg !== 'transparent');
+  for (const [cx, cy] of cells) p.add(ox + (cx - b.x0) * s, oy + (cy - b.y0) * s);
+  p.fill(ctx, color, shadow);
 }
 
 /**

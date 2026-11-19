@@ -1,5 +1,12 @@
 # Changelog
 
+## 8.9.0
+
+- **Save any tree as an SVG file.** The four trees now have a **Save SVG** button: the lineage tree, the state-space basins, the rule family tree in Evolution and the ancestors' family tree. The file is a vector drawing, so it stays sharp at any size and opens in a browser, Inkscape, Illustrator or Figma. The lineage tree and the basins are saved as you see them, with the zoom, layout and highlight you chose, plus a caption and a colour key. The ancestors' tree is laid out afresh as one column per generation, so it doesn't depend on your window. Each file uses the colours of the mode you're in, Daylight or Lamplight.
+- **How it works.** The trees are drawn on canvases. Instead of writing each drawing a second time, a small class called `Svg2D` takes the canvas's place: it has the same drawing calls, and writes SVG elements instead of pixels. Fields of same-sized dots are written as short round-capped strokes, which keeps the biggest basin file (every state of a 4×4 torus) to about 2 MB.
+- The state-space view now fills its dots one colour at a time instead of one at a time, which is quicker on screen too.
+- Six tests for the SVG writer (95 in total).
+
 ## 8.8.0
 
 - **Daily puzzle.** The Puzzles tab opens on a new puzzle every day, the same for everyone and made from the date alone, so there's no server. The date seeds a search over small patterns in a 5×5 box, and the first one whose fate makes a good goal becomes the answer: keep changing for at least so many generations, vanish in exactly so many, or settle into exactly a given set of objects. Every daily puzzle is therefore solvable, and par is the number of stones the answer used. Solving keeps a streak of days in a row, and **Share your result** copies a line such as "Life Tree daily #1: solved with 5 stones (at par) ●●●●●" with a link, without giving the answer away. `#puzzles/daily` opens it.

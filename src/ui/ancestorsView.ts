@@ -10,7 +10,8 @@ import { emit } from './bus';
 import { fitCanvas, h } from './dom';
 import { icon } from './icons';
 import { onTheme, tok } from './theme';
-import { CellPainter, drawBoardLines, drawStarPoints, drawThumb } from './thumb';
+import { asCanvas, downloadSvg, Svg2D, svgFileName } from './svgExport';
+import { CellPainter, drawBoardLines, drawStarPoints, drawThumb, paintThumb } from './thumb';
 
 const GW = 12, GH = 12;
 const SHOW = 10;
@@ -48,6 +49,7 @@ export function createAncestorsView(root: HTMLElement) {
   treeWrap.append(lines, cols);
   const status = h('span.readout.dim');
   const findBtn = h('button.primary', { onclick: () => start() }, icon('rewind'), 'Find parents');
+  const saveBtn = h('button.small', { title: 'Save the family tree as an SVG file', onclick: () => exportTree() }, icon('download'), 'Save SVG');
   const rewindBtn = h('button', { onclick: () => rewind(5), title: 'Go back five generations, taking the smallest parent each time' }, 'Rewind 5 steps');
   const marginSel = h('select', { onchange: (e: Event) => { margin = +(e.target as HTMLSelectElement).value; } },
     h('option', { value: '1' }, 'within 1 cell of the pattern'), h('option', { value: '2' }, 'within 2 cells (slower)'));
@@ -66,7 +68,7 @@ export function createAncestorsView(root: HTMLElement) {
         h('div.fig-controls', {}, findBtn, rewindBtn),
         status,
         h('p.small.dim', {}, 'Parents are listed smallest first. "None in the box" does not prove a pattern is a Garden of Eden: a parent might need live cells further out. It does prove there is no parent of that size.')),
-      h('section.panel.anc-tree-panel', {}, h('h3', {}, 'Family tree (time runs right to left)'), treeWrap))));
+      h('section.panel.anc-tree-panel', {}, h('div.panel-head', {}, h('h3', {}, 'Family tree (time runs right to left)'), saveBtn), treeWrap))));
 
   // ---- editor ----
   const current = (): Cell[] => [...cells].map((k) => k.split(',').map(Number) as Cell);
@@ -264,6 +266,70 @@ export function createAncestorsView(root: HTMLElement) {
     }
     lines.innerHTML = paths.join('');
   }
+  /**
+   * The family tree as an SVG file, laid out afresh from the search results
+   * rather than copied from the page, so it is the same at any window size:
+   * one column per generation, newest on the right, with a curve from each
+   * parent to the pattern it was picked to explain.
+   */
+  function exportTree() {
+    if (!columns.length || busy) return;
+    const thumbW = 96, thumbH = 72, cardW = thumbW + 12, cardH = thumbH + 30, gapY = 10, gapX = 56, head = 48, pad = 20;
+    const L = columns.length;
+    const rows = Math.max(...columns.map((c) => Math.max(1, c.shown.length)));
+    const W = pad * 2 + L * cardW + (L - 1) * gapX;
+    const H = pad * 2 + head + rows * cardH + (rows - 1) * gapY + 24;
+    const svg = new Svg2D(W, H);
+    const ctx = asCanvas(svg);
+    const ui = tok('--ui');
+    const colX = (level: number) => pad + (L - 1 - level) * (cardW + gapX);
+    const cardY = (i: number) => pad + head + i * (cardH + gapY);
+    // Curves first, so the cards sit on top of them.
+    ctx.strokeStyle = tok('--rule-strong');
+    ctx.lineWidth = 1.5;
+    for (let level = 0; level + 1 < L; level++) {
+      const col = columns[level];
+      if (col.picked < 0) continue;
+      const x1 = colX(level), y1 = cardY(col.picked) + cardH / 2;
+      columns[level + 1].shown.forEach((_, i) => {
+        const x2 = colX(level + 1) + cardW, y2 = cardY(i) + cardH / 2, mx = (x1 + x2) / 2;
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.bezierCurveTo(mx, y1, mx, y2, x2, y2);
+        ctx.stroke();
+      });
+    }
+    columns.forEach((col, level) => {
+      const x = colX(level);
+      const r = col.result;
+      ctx.textAlign = 'left';
+      ctx.fillStyle = tok('--ink');
+      ctx.font = `600 14px ${ui}`;
+      ctx.fillText(level === 0 ? 'Now' : `Generation −${level}`, x, pad + 16);
+      ctx.fillStyle = tok('--muted');
+      ctx.font = `12px ${ui}`;
+      const note = level === 0 ? 'the target' : !r ? '' : !r.parents.length ? (r.exhausted ? 'no parent in the box' : 'the search gave up') : `${r.parents.length}${r.capped || !r.exhausted ? '+' : ''} parent${r.parents.length === 1 ? '' : 's'}`;
+      ctx.fillText(note, x, pad + 34);
+      col.shown.forEach((p, i) => {
+        const y = cardY(i);
+        const picked = col.picked === i && level < L - 1;
+        svg.raw(`<rect x="${x}" y="${y}" width="${cardW}" height="${cardH}" rx="6" fill="${tok('--surface')}"${picked ? ` stroke="${tok('--ink')}" stroke-width="1.5"` : ''}/>`);
+        svg.raw(`<rect x="${x + 6}" y="${y + 6}" width="${thumbW}" height="${thumbH}" rx="4" fill="${tok('--board')}"/>`);
+        paintThumb(ctx, p, x + 6, y + 6, thumbW, thumbH, level === 0 ? '--shell' : '--slate', 'transparent', 3, true);
+        ctx.fillStyle = tok('--ink');
+        ctx.font = `500 12px ${ui}`;
+        ctx.textAlign = 'center';
+        ctx.fillText(`${p.length} cells`, x + cardW / 2, y + cardH - 9);
+      });
+    });
+    ctx.textAlign = 'left';
+    ctx.fillStyle = tok('--muted');
+    ctx.font = `12px ${ui}`;
+    ctx.fillText('Each pattern turns into the one its curve leads to, one generation later. Smallest parents shown first.', pad, H - pad + 4);
+    const cells = columns[0].child.length;
+    downloadSvg(svg.toString({ background: tok('--ground'), title: `Ancestors of a ${cells}-cell pattern, ${L - 1} generations back` }), svgFileName(`ancestors ${cells} cells ${L - 1} generations`));
+  }
+
   window.addEventListener('resize', () => requestAnimationFrame(drawLines));
   onTheme(() => { drawEditor(); renderTree(); });
 
