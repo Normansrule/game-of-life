@@ -12,6 +12,7 @@ import { createPuzzlesView } from './ui/puzzlesView';
 import { createDuelView } from './ui/duelView';
 import { createAncestorsView } from './ui/ancestorsView';
 import { createGuideView } from './ui/guideView';
+import { createGameView } from './ui/gameView';
 import { on } from './ui/bus';
 import { setupGetApp } from './ui/getApp';
 import { h } from './ui/dom';
@@ -30,6 +31,7 @@ interface View {
 const routes: Record<string, (root: HTMLElement) => View> = {
   home: createHomeView,
   sim: createSimulator,
+  play: createGameView,
   guide: createGuideView,
   lineage: createLineageView,
   basins: createBasinView,

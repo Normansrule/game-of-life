@@ -1,5 +1,13 @@
 # Changelog
 
+## 9.0.0
+
+- **Play, a game that teaches the maths.** A new tab, linked from the top of the home page ("Learn it by playing") and first among the view cards. Eight chapters walk a path from the rule itself to the edge of chaos: predict the next generation, repair a still life with one stone, count a period, race a glider or spaceship to a flag against the speed of light, aim two gliders so their collision vanishes, leaves a block or lets one through, draw a pattern's parent, guess how much of a random soup survives, and design a rule that boils and one that makes structure. That's 22 levels in all.
+- **The idea, the play and where it's used.** Each chapter shows its idea in a paragraph and one formula, then its three levels, then a panel that unlocks when you finish: where that idea matters outside the board (memory, clocks, signals and light cones, computers built from collisions, inverse problems like CT scans, why epidemiologists model contacts rather than averages, designing for emergence), with a link into the view that goes deeper.
+- **Feedback that teaches.** The engine judges every answer. A wrong prediction marks the stones you missed and the ones that shouldn't be there, a wrong repair is played out so you see what it does instead, a parent can be run one step to compare with the target, and a period that is a multiple of the real one is told why it's not the smallest. Levels earn up to three stars, chapters unlock in order, progress is saved in the browser, and `#play/<chapter>` links to a chapter.
+- **The README, rewritten.** A contents table, a section on the game with a chapter table and three recordings of it, and a tour that shows every view in motion. New recordings of the field guide, lineage tree, deep time, state space, puzzles, Duel and the math page replace the old still screenshots.
+- Ten tests for the game, including one that solves every level (105 in total).
+
 ## 8.9.0
 
 - **Save any tree as an SVG file.** The four trees now have a **Save SVG** button: the lineage tree, the state-space basins, the rule family tree in Evolution and the ancestors' family tree. The file is a vector drawing, so it stays sharp at any size and opens in a browser, Inkscape, Illustrator or Figma. The lineage tree and the basins are saved as you see them, with the zoom, layout and highlight you chose, plus a caption and a colour key. The ancestors' tree is laid out afresh as one column per generation, so it doesn't depend on your window. Each file uses the colours of the mode you're in, Daylight or Lamplight.
