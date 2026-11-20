@@ -121,6 +121,7 @@ const GROUPS: [string, Card[]][] = [
     { route: 'evolve', name: 'Evolution', what: 'Breed rules with a genetic algorithm and watch them get better at a task.', pattern: 'lwss' },
   ]],
   ['Play', [
+    { route: 'play', name: 'The game', what: 'Eight chapters that teach the maths by playing it, from the rule itself to the edge of chaos.', pattern: 'copperhead' },
     { route: 'puzzles', name: 'Puzzles', what: 'Ten challenges, from a still life to a spaceship, checked by the engine.', pattern: 'glider' },
     { route: 'duel', name: 'Duel', what: 'Life for two players: your black stones against the computer\u2019s white, over five rounds.', pattern: 'beacon' },
   ]],

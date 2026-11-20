@@ -5,18 +5,81 @@
 [![Desktop apps](https://github.com/Normansrule/game-of-life/actions/workflows/release.yml/badge.svg)](https://github.com/Normansrule/game-of-life/actions/workflows/release.yml)
 [![Latest release](https://img.shields.io/github/v/release/Normansrule/game-of-life?label=download)](https://github.com/Normansrule/game-of-life/releases/latest)
 
-**[Open the web app](https://normansrule.github.io/game-of-life/)** · **[Download for Windows, macOS or Linux](https://github.com/Normansrule/game-of-life/releases/latest)** · [Setup](#setup-and-usage) · [Design](#design) · [Progress](#progress-tracker)
+<p align="center"><b>Conway's Game of Life on a Go board: a simulator, a game that teaches the maths, and a lab for where it shows up in the real world.</b></p>
 
-In 1970 John Conway and his students worked out the Game of Life by hand, with stones on a Go board. Life Tree hands you that board. Place a few stones, press play, and then follow them anywhere: forward through a **lineage tree** of every object that splits, collides and dies, backward to the patterns that could have come **before**, up into a **3D spacetime** sculpture, a quadrillion generations ahead with **Hashlife**, sideways into 262,144 other rules, and down into the **math** that explains it. There are also eighteen live demos of cellular automata out in the world, from heart rhythms and wind tunnels to phantom traffic jams.
+<p align="center">
+  <a href="https://normansrule.github.io/game-of-life/"><b>Open the web app</b></a> ·
+  <a href="https://normansrule.github.io/game-of-life/#play"><b>Play the game</b></a> ·
+  <a href="https://github.com/Normansrule/game-of-life/releases/latest">Download for Windows, macOS or Linux</a> ·
+  <a href="#a-tour-in-motion">Tour</a> ·
+  <a href="#setup-and-usage">Setup</a>
+</p>
+
+![The home page: scrolling drops five stones onto a 3D Go board, runs them, and stacks every generation into a tower](docs/media/home.gif)
+
+In 1970 John Conway and his students worked out the Game of Life by hand, with stones on a Go board. Life Tree hands you that board. Place a few stones, press play, and then follow them anywhere: forward through a **lineage tree** of every object that splits, collides and dies, backward to the patterns that could have come **before**, up into a **3D spacetime** sculpture, a quadrillion generations ahead with **Hashlife**, sideways into 262,144 other rules, and down into the **math** that explains it.
+
+New in 9.0, **[Play](#play-learn-it-by-playing)** turns all of that into a game. Eight chapters each teach one idea by making you use it: predict the next generation, repair a still life, race a spaceship against the speed of light, aim gliders so their collision computes something. Finishing a chapter unlocks where that idea is used outside the board, from clocks and computer logic to CT scans and epidemics.
 
 It's a static site written in TypeScript and built with Vite. Everything runs in your browser: there's no server and no account. It also installs as an offline app, and there's a desktop app built from the same code.
 
 ![Life Tree on a laptop, showing a glider gun's spacetime built from Go stones, and on a phone, showing the home page](docs/media/devices.jpg)
 
-![The home page: scrolling drops five stones onto a 3D Go board, runs them, and stacks every generation into a tower](docs/media/home.gif)
+## Contents
+
+| Explore | Understand | Build and run |
+| --- | --- | --- |
+| [Play: learn it by playing](#play-learn-it-by-playing) | [The math](#the-math) | [Use it three ways](#use-it-three-ways) |
+| [A tour in motion](#a-tour-in-motion) | [Applications](#applications) | [Setup and usage](#setup-and-usage) |
+| [Key features](#key-features) | [How it works](#how-it-works) | [Project structure](#project-structure) |
+| [Features in detail](#features-in-detail) | [Design](#design) | [Progress and roadmap](#progress-tracker) |
+
+## Play: learn it by playing
+
+![Playing the game: placing stones on a level, the engine checking the answer, and the chapter unlocking its application](docs/media/play.gif)
+
+Most explanations of Life tell you the rule and then show you gliders. The game does it the other way round: you play first, and the idea is the thing you needed to win. Each chapter has three parts side by side.
+
+1. **The idea.** A short paragraph and one formula, set with KaTeX, for the maths behind the chapter.
+2. **The play.** Three levels on a Go board. The engine checks every answer, so a wrong one is told exactly what went wrong (which stones were missing, which were extra, what the pattern did instead) and lets you run it on the board to see why.
+3. **Where it's used.** Locked until you finish the chapter, then revealed with a link into the part of the app that goes deeper.
+
+| | Chapter | You play | The idea | Where it's used |
+| --- | --- | --- | --- | --- |
+| 1 | One rule, applied everywhere | Predict the next generation of a blinker, a glider and the R-pentomino | The rule as a function of the eight neighbours | Traffic and crowd models, fires and epidemics, GPU image filters |
+| 2 | Fixed points | Repair a beehive, loaf and pond with one stone | A still life is a fixed point, F(x) = x | Memory: magnetic domains, flip-flops, switched-on genes |
+| 3 | Cycles | Count the period of a toad, pulsar and pentadecathlon | Periodic orbits, and lcm for cycles side by side | Clocks: pendulums, quartz, chemical oscillators |
+| 4 | The speed of light | Race a glider or a spaceship to a flag before the deadline | Nothing travels faster than c, one cell a generation | Signals, light cones and network latency |
+| 5 | Collisions are logic | Pick the lane and timing of two gliders to vanish, leave a block or let one through | 36 collisions, several outcomes: bits and gates | Computers built in Life, billiard-ball and optical logic |
+| 6 | Running time backwards | Draw a pattern that becomes the target in one step | F is not one-to-one, Gardens of Eden | Inverse problems: CT scans, deblurring, hash functions |
+| 7 | The ash | Guess how much of a random soup survives, then measure it | Mean-field theory predicts 37%; real soups leave only a few percent | Why epidemiologists model contacts, not averages |
+| 8 | The edge of chaos | Design a rule that boils, then one that makes structure | 262,144 rules and Wolfram's four classes | Designing for emergence: swarms, self-assembly, crystal growth |
+
+| Chapter 4: race a spaceship to the flag | Chapter 5: aim one glider at another |
+| --- | --- |
+| ![Placing a glider so it reaches the flag before the deadline](docs/media/play-race.gif) | ![Choosing the lane and timing of two colliding gliders until they leave a single block](docs/media/play-logic.gif) |
+
+Each level earns up to three stars (fewer for extra tries or a hint), chapters unlock in order, and progress is saved in your browser. Every level is proved solvable by the test suite, and the ash chapter's "measured" answers come from real soups on a torus run by the same engine. Link straight to a chapter with `#play/<chapter>`, such as `#play/logic`.
+
+## A tour in motion
+
+Every view in the app, recorded from the running site.
+
+| Board | Field guide | Lineage tree |
+| --- | --- | --- |
+| ![The simulator running a random soup](docs/media/simulator.gif) | ![Field guide cards, each pattern moving on its own board](docs/media/guide.gif) | ![A lineage tree growing as the R-pentomino evolves](docs/media/lineage.gif) |
+| **Ancestors** | **3D spacetime** | **Deep time** |
+| ![Rewinding a glider one generation at a time](docs/media/ancestors.gif) | ![A glider gun in 3D spacetime, built from Go stones](docs/media/spacetime.gif) | ![Hashlife jumping a pattern far ahead, doubling the generation each time](docs/media/deep.gif) |
+| **State space** | **Rule atlas** | **Evolution** |
+| ![Basins of attraction on a small torus](docs/media/basins.gif) | ![Eighteen rules running and being classified live](docs/media/atlas.gif) | ![A genetic algorithm evolving a density classifier](docs/media/evolve.gif) |
+| **Puzzles** | **Duel** | **The math** |
+| ![Solving a puzzle on a small Go board](docs/media/puzzles.gif) | ![A game of Immigration against the computer](docs/media/duel.gif) | ![Scrolling the math page with live charts](docs/media/math.gif) |
+| **Heart rhythm** | **Wind tunnel** | **Phantom traffic jams** |
+| ![A broken wave curls into a re-entrant spiral](docs/media/heart.gif) | ![Lattice gas flowing past a cylinder](docs/media/wind.gif) | ![Cars on a ring road with jams drifting backwards](docs/media/traffic.gif) |
 
 ## Key features
 
+- **A game that teaches the maths.** Eight chapters, 22 levels, each idea learned by using it and each one tied to where it matters outside the board. [See how it works](#play-learn-it-by-playing).
 - **A story you scroll.** The website opens on a Go board in 3D. As you scroll, five stones drop onto it, the rule runs generation by generation, and then every generation is stacked into a tower you see from the side. Scroll back and it runs backwards.
 - **A real board.** The simulator draws the grid as a Go board. Cells sit on the intersections as slate and clamshell stones, and each generation's births alternate black and white like turns, so you can see how old a pattern is. Copy a link and whoever opens it gets your board, or turn on sound and hear the newborn stones. Zoom out and the stones become flat cells, which keeps a 1,024 × 1,024 board fast. It renders with WebGL2 (Web Graphics Library 2) and falls back to a plain canvas.
 - **Field guide.** A card for each of the 27 classic patterns, moving on its own small board, with facts the engine measures by running it: period, speed and heat, rotor and stator, and how long each methuselah takes to settle and what it leaves.
@@ -65,7 +128,7 @@ flowchart LR
 <!-- progress:start -->
 ![Progress by area](docs/media/progress.svg)
 
-**42 of 49 roadmap items done (86%).** Generated from the checklist below by `npm run progress`.
+**43 of 50 roadmap items done (86%).** Generated from the checklist below by `npm run progress`.
 
 | Area | Progress | Done | Up next |
 | --- | --- | --- | --- |
@@ -73,7 +136,7 @@ flowchart LR
 | Trees and time | ▰▰▰▰▰▰▰▰▰▱ 86% | 6 / 7 | Hashlife in a Web Worker for huge patterns |
 | Math | ▰▰▰▰▰▰▰▰▰▱ 89% | 8 / 9 | Glider synthesis: building patterns from colliding gliders |
 | Applications | ▰▰▰▰▰▰▰▰▱▱ 75% | 3 / 4 | Neural cellular automata that regrow an image |
-| Games and labs | ▰▰▰▰▰▰▰▰▰▰ 100% | 4 / 4 | all done |
+| Games and labs | ▰▰▰▰▰▰▰▰▰▰ 100% | 5 / 5 | all done |
 | Apps and publishing | ▰▰▰▰▰▰▰▰▱▱ 82% | 14 / 17 | Intel Mac build; Code-signed installers |
 <!-- progress:end -->
 
@@ -100,6 +163,7 @@ timeline
   v8.7 : Field guide, every pattern measured
   v8.8 : A daily puzzle
   v8.9 : Save any tree as an SVG file
+  v9.0 : Play, a game that teaches the maths
 ```
 
 Full details in [CHANGELOG.md](CHANGELOG.md).
@@ -150,6 +214,7 @@ Tick a box here and run `npm run progress` to redraw the bars above. CI fails if
 - [x] Evolution lab with a genetic algorithm and family tree
 - [x] Ten puzzles checked by the engine
 - [x] A daily puzzle
+- [x] Play: eight chapters that teach the maths and where it's used
 
 #### Apps and publishing
 - [x] Public GitHub repo with CI
@@ -174,6 +239,8 @@ Tick a box here and run `npm run progress` to redraw the bars above. CI fails if
 
 ## Features in detail
 
+The game is covered [above](#play-learn-it-by-playing). Here is every other view in turn.
+
 ### The board (simulator)
 ![The simulator running a random soup](docs/media/simulator.gif)
 
@@ -191,6 +258,8 @@ Tick a box here and run `npm run progress` to redraw the bars above. CI fails if
 ### Field guide
 A card for each of the 27 patterns in the library, each one moving on its own small Go board: oscillators loop through their cycle, spaceships travel, guns fire a steady stream and methuselahs play their first 200 generations while the view pulls back. Filter by kind, open any pattern on the board, or link straight to a card, such as `#guide/acorn`.
 
+![Field guide cards, each pattern moving on its own small board](docs/media/guide.gif)
+
 Nothing on a card is typed in by hand. Every number is measured by running the pattern:
 - **Repeating patterns:** period, speed, the range of stones over a cycle, heat (stones placed or taken off per generation) and the rotor and stator (points that change, and stones that never move).
 - **Guns:** the period, and the gliders fired per period.
@@ -206,7 +275,7 @@ Pick a seed (or draw one in the simulator and press *Grow a lineage tree*). The 
 - a summary and final census (the R-pentomino gives exactly the known 8 blocks, 6 gliders, 4 beehives, 4 blinkers, a boat, a loaf and a ship);
 - **Save SVG** saves the tree as you see it, with its zoom and highlight, a caption and a colour key, as a vector file.
 
-![Lineage tree growing upward](docs/screenshots/lineage-tree.png)
+![A lineage tree growing as the R-pentomino evolves](docs/media/lineage.gif)
 
 ### 3D spacetime
 Every live cell at every generation becomes a Go stone, with time running upward, so each generation is a layer of stones stacked on the one before. The stones are lit lens shapes with a highlight that follows the camera, drawn with WebGL2 instancing in one draw call. **Shape** switches to cubes, and very large sculptures (over 60,000 stones) are drawn as cubes automatically to stay smooth. Gliders become diagonal tubes, oscillators become braids and a methuselah like Acorn grows into a tree. Orbit, zoom, replay, colour by time or by object, and send any pattern from the simulator.
@@ -216,12 +285,12 @@ Every live cell at every generation becomes a Go stone, with time running upward
 ### Deep time (Hashlife)
 A from-scratch implementation of Gosper's **Hashlife** algorithm: a hash-consed quadtree with memoised futures. Jump a glider gun to generation 2³² (4,294,967,296) in milliseconds, double the generation with one click, watch population against generation on a log–log chart, and see the tree level, unique node count and cache hit rate live. It is tested cell for cell against the direct engine.
 
-![A glider gun after 2^30 generations](docs/screenshots/deep-time.png)
+![Hashlife jumping a pattern ahead, doubling the generation each time](docs/media/deep.gif)
 
 ### State-space trees
 On a tiny torus (3×3 up to 3×6, up to 262,144 states) the app computes the successor of **every** configuration and draws the **basins of attraction**: each attractor cycle with the trees of states that flow into it (the "basin of attraction field" popularised by DDLab). Hover any state to see it and its trajectory; Garden of Eden states (no predecessor) are highlighted. **Save SVG** saves the whole field, or the basin you've opened, with a key.
 
-![Basins of attraction on a 4×4 torus](docs/screenshots/basins.png)
+![Basins of attraction on a small torus](docs/media/basins.gif)
 
 ### Ancestors
 Life run backwards. Draw a pattern and a backtracking search finds every **parent** in a box around it: every pattern that becomes exactly yours one generation later (a glider has 79 in a 5×5 box). Click a parent to search for its parents, and a family tree grows back in time; **Rewind** follows the smallest parent several generations at once. When nothing is found the page says so honestly: no parent of that size exists, which is not yet a proof of a Garden of Eden. **Save SVG** lays the family tree out as a clean figure, one column per generation, whatever the size of your window.
@@ -243,17 +312,19 @@ Ten construction challenges, from "draw a still life" to "draw a period-3 oscill
 
 **Daily puzzle.** A new puzzle every day, the same for everyone, with no server. The date seeds a search over small patterns in a 5×5 box, and the first one whose fate makes a good goal becomes the day's answer. The goal is one of three kinds: keep changing for at least so many generations, vanish in exactly so many, or settle into exactly a given set of objects (for example "3 blocks and a blinker"). Because the goal is written from a real pattern, every daily puzzle can be solved, and par is the number of stones that pattern used. Solve it to keep your streak going, and share a result line that doesn't give the answer away. Link to it with `#puzzles/daily`.
 
-![Puzzles](docs/screenshots/puzzles.png)
+![Solving a puzzle and watching it run](docs/media/puzzles.gif)
 
 ### Duel
 Life for two players, a variant called **Immigration** that Don Woods described in 1971. The rules are Conway's, but every stone belongs to a side. A surviving stone keeps its colour, and a new stone takes the colour of most of the three stones that made it. You play black against the computer's white on a 13-line board, or set **Opponent** to *A friend on this device* and pass it back and forth, black against white. Each round the two sides take turns placing three stones each, and then the board runs eight generations. After five rounds, whoever has more stones wins.
 
 The computer tries each empty point near the stones, runs the board forward and keeps the move that leaves it furthest ahead. On **Easy** it picks loosely from the better half of those moves, on **Normal** it only looks at a sample of them, and on **Hard** it tries every one. The last stone before a run counts most, so the computer opens rounds 1, 3 and 5, which means you place the last stone of the game. With **Show where it ends up** on, pointing at a point shows faint stones where the board would finish after the run if you played there. Your record against the computer at each level is saved in the browser; games against a friend don't count towards it.
 
-![Duel against the computer](docs/screenshots/duel.png)
+![A game of Immigration against the computer](docs/media/duel.gif)
 
 ### The math
 A long-form page with KaTeX formulas and charts computed live from the same engine: the rule as a formula, convolution, counting rules and states, **mean-field theory** with a cobweb diagram checked against real soups, **block entropy**, **damage spreading**, the **speed of light**, growth rates of guns, **phase space and the Garden of Eden theorem**, a proof that the lineage tree is well defined, the **linear replicator rule over the two-element field 𝔽₂**, Turing universality, Hashlife, a live **census of random soups** with a Zipf rank–frequency fit and Shannon diversity, **self-organised criticality and the sandpile group** (the abelian property, the group order as a determinant and spanning-tree count, the group identity drawn live, and a measured avalanche exponent), **rule space and the edge of chaos** (Langton's λ against live-classified random rules, and a proof that the replicator rule erases every pattern on a 2^k torus), and **evolving computation** (why local majority fails, how GKL works, the GA's fitness function, and the Land–Belew impossibility result, with live accuracy curves), and **every pattern in a 4×4 box**: Burnside's lemma counts the 8548 patterns up to symmetry, and all of them are run to their fate in a background thread, with the share of each outcome, fate by starting size, the lifespan distribution and a gallery of the longest-lived methuselahs, and **running time backwards**: parents as a constraint-satisfaction problem, and all 2^25 5×5 patterns stepped once to show how unevenly the 512 possible 3×3 results are reached (entropy 7.40 of 9 bits). See [docs/MATH.md](docs/MATH.md).
+
+![Scrolling the math page: formulas and charts computed live from the engine](docs/media/math.gif)
 
 ### Applications
 Eighteen live demos, each new one backed by a unit-tested model in `src/engine/models/`.
@@ -285,7 +356,7 @@ New in v3:
 
 The original nine: procedural **cave generation**, **forest fires** and self-organised criticality, **epidemic waves** (SIRS), **traffic jams** (Rule 184 with the fundamental diagram), **random numbers** from Rule 30, **image denoising** with the Anneal rule, **morphogenesis** (Turing-style spots and stripes), **Wireworld circuits** (diodes and fan-out, verified by simulation) and **Langton's ant**, plus nine more fields from seismology to neural cellular automata. See [docs/APPLICATIONS.md](docs/APPLICATIONS.md).
 
-## Gallery
+## Stills
 
 | Home, Lamplight | Lineage tree | Math |
 | --- | --- | --- |
@@ -318,7 +389,7 @@ npm run dev        # then open the http://localhost:5173 address it prints
 | `npm run preview` | Serves the production build locally (installable, works offline) |
 | `npm run progress` | Redraws the progress tracker from the roadmap checklist |
 
-The site opens on the home page, and the top bar lists all twelve views. Your choice of colour mode is saved in the browser. The installed app and the desktop app skip the home page and open straight on the board.
+The site opens on the home page, and the top bar lists all fourteen views. Your choice of colour mode is saved in the browser. The installed app and the desktop app skip the home page and open straight on the board.
 
 ### Keyboard shortcuts (board)
 
@@ -358,15 +429,16 @@ flowchart TB
     rules["rules.ts<br/>B/S rules"] --> life
     evolve["evolve.ts<br/>genetic algorithm"]
     models["models/<br/>heart · gas · Lenia · traffic…"]
+    game["game.ts<br/>chapters and checks"]
   end
   subgraph render["src/render"]
     gl["WebGL2 grid shader<br/>(Canvas 2D fallback)"]
     cubes["instanced 3D cubes"]
   end
-  subgraph ui["src/ui: twelve views"]
+  subgraph ui["src/ui: fourteen views"]
     sim["Simulator"]; tree["Lineage tree"]; space["3D spacetime"]; deep["Deep time"]
     basinv["State space"]; anc["Ancestors"]; atlas["Rule atlas"]; evo["Evolution"]
-    puz["Puzzles"]; math["Math"]; apps["Applications"]
+    puz["Puzzles"]; math["Math"]; apps["Applications"]; play["Play"]
   end
   life --> sim --> gl
   lineage --> tree
@@ -378,6 +450,7 @@ flowchart TB
   evolve -->|Web Worker| evo
   exhaustive -->|Web Worker| math
   models --> apps
+  life --> game --> play
 ```
 
 How the lineage tree is built, one generation at a time:
@@ -430,6 +503,7 @@ src/
     daily.ts       the daily puzzle, made from the date, with streaks and a share line
     immigration.ts two-colour Life for Duel, and the computer player
     predecessors.ts  backtracking parent search and the 3×3 preimage census
+    game.ts        the game: chapters, levels and the checks that judge every answer
     models/        sandpile, FHP gas, Wa-Tor, excitable medium, snowflakes, Lenia, Schelling, hodgepodge, traffic
   render/
     renderer.ts    the Go board shader (WebGL2) and its Canvas 2D fallback
@@ -441,6 +515,8 @@ src/
     homeStory.ts   the scroll story at the top of the home page
     homeSections.ts  the rule toy, the numbers and the view cards
     duelView.ts    Duel against the computer or a friend
+    gameView.ts    Play: the chapter path, the idea, the levels and the unlocked applications
+    gameBoard.ts   the game's Go board: stones, target rings, start and flag zones, and the run loop
     theme.ts       colour modes, and design tokens for canvas code
     icons.ts       the icon set (inline SVG on a 24-unit grid)
     svgExport.ts   Svg2D, a stand-in canvas context that writes SVG, so every tree saves as a vector file

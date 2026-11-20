@@ -98,7 +98,7 @@ export function createStory(opts: { onOpenBoard: () => void }) {
       h('p.lede', {}, 'In 1970 John Conway and his students in Cambridge worked out the Game of Life by hand, with stones on a Go board. Life Tree gives you that board, then lets you follow every stone forward, backward and into the math behind it.'),
       h('div.actions', {},
         h('button.primary', { type: 'button', onclick: () => opts.onOpenBoard() }, 'Open the board', icon('arrow')),
-        h('a.cta-link', { href: '#math' }, 'How the rules work'))),
+        h('a.cta-link', { href: '#play' }, 'Learn it by playing'))),
     h('article.story-ch', {},
       h('p.story-kicker', {}, 'One'),
       h('h2', {}, 'Five stones.'),
