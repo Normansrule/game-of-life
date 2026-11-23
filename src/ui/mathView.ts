@@ -1,4 +1,5 @@
 import katex from 'katex';
+import { RECIPES } from '../engine/synthesis';
 import 'katex/dist/katex.min.css';
 import { Life } from '../engine/life';
 import { RULE_PRESETS, parseRule, type Rule } from '../engine/rules';
@@ -677,6 +678,16 @@ The empty $3\\times3$ is by far the most common present: about 15% of all pasts 
 <p><b>Why it matters.</b> Reconstructing a cause from its effect is an <em>inverse problem</em>, as in recovering a sharp image from a blurred one, a body's interior from CT projections, or yesterday's atmosphere from today's measurements. They share the difficulty seen here: many causes fit one effect, so extra assumptions (here, "smallest parent first") are needed to pick one. Functions that are easy to compute and hard to invert are also the raw material of cryptography; Wolfram proposed the Rule 30 automaton (see Applications) as a random-number generator for exactly that reason.</p>`,
         figure('Every 5×5 pattern stepped once, computed live. Each point is one of the 512 possible 3×3 presents, sorted by how many pasts lead to it; the vertical axis is logarithmic.', past.el),
       ),
+
+      section('synthesis', '20. Building with gliders', `
+<p>A <b>glider synthesis</b> of an object $X$ is a set of gliders, all far apart and flying, that eventually becomes exactly $X$. Its <b>glider cost</b> is the fewest gliders that will do:
+$$c(X) = \\min\\{\\, n : \\text{some } n \\text{ gliders become } X \\,\\}.$$
+One glider only ever stays a glider, so every other object costs at least 2.</p>
+<p><b>Every two-glider crash.</b> Fix one glider flying down and to the right. A second can meet it head on or at right angles (the fourth direction runs parallel and never meets it). Up to moving the whole picture in space and time, the second glider is fixed by its <em>lane</em>, how far it is shifted sideways, and its <em>phase</em>, 0 to 3 generations of delay. Gliders more than a few lanes apart pass without coming within two cells of each other, and a cell can only feel its 8 neighbours, so they never interact; the engine tries lanes $-12$ to $12$ and checks that the outer ones all miss. That makes the catalogue complete: of the $3 \\times 25 \\times 4 = 300$ settings (counting mirror images separately), 126 touch. Of those, 49 destroy both gliders, and only seven named objects are ever left on their own: a block, blinker, beehive, pond, boat, loaf or eater. So these seven cost exactly 2, and every other object costs at least 3. The eater matters: it is the still life that swallows gliders at the ends of wires in Life computers, and two gliders are enough to put one down. The <a href="#synth">Synthesis</a> tab shows the whole catalogue as a chart.</p>
+<p><b>Building in stages.</b> Bigger objects are built one step at a time: make something cheap, then fire more gliders at it. The search takes every clean product of the step before (up to two still objects) and fires one more glider at it from each of 4 directions, 17 lanes and 4 phases, which is 272 shots per product. Three gliders turn a pond into a ship or a tub, so $c(\\text{ship}) = c(\\text{tub}) = 3$. Four reach a beacon and a long boat, which proves $c \\le 4$ for them; a cleverer three-glider crash, with all three arriving at once, could still beat that, because the search only fires each new glider after the last reaction has settled.</p>
+<p><b>What can't be built.</b> A Garden of Eden (§9, §19) has no parent at all, so no gliders can ever become one: not every pattern has a synthesis. But a great deal does. Glider guns can themselves be built from gliders, and so can the "construction arms" that fire gliders where they are told. In 2010 Andrew Wade's <em>Gemini</em> put these together into a pattern that builds a copy of itself from glider streams and then deletes the original. That is the self-reproducing machine John von Neumann set out to design when he invented cellular automata in the 1940s.</p>`,
+        figure('The recipe book: the fewest gliders this search needed for each object, checked by the test suite with every glider in flight from the start.', recipeTable()),
+      ),
     ),
   );
   root.append(content);
@@ -710,6 +721,15 @@ The empty $3\\times3$ is by far the most common present: about 15% of all pasts 
     },
     deactivate() {},
   };
+}
+
+function recipeTable() {
+  return h('table.math-table', {},
+    h('thead', {}, h('tr', {}, h('th', {}, 'Object'), h('th', {}, 'Gliders'), h('th', {}, 'How'))),
+    h('tbody', {}, ...RECIPES.map((r) => h('tr', {},
+      h('td', {}, h('a', { href: `#synth/${r.name.toLowerCase().replace(/\s+/g, '-')}` }, r.name)),
+      h('td', {}, String(r.gliders)),
+      h('td', {}, r.gliders === 2 ? 'Two gliders crash' : `Two gliders, then ${['', 'one more', 'two more, one at a time', 'three more, one at a time'][r.gliders - 2]}`)))));
 }
 
 function blockEntropy(g: Life): number {

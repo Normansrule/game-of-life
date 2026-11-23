@@ -145,3 +145,19 @@ Code: `src/engine/exhaustive.ts`, UI: `src/ui/boxFigure.ts`, worker: `src/ui/box
 - **3×3 census**: all $2^{25}$ 5×5 patterns stepped once, middle 3×3 tallied. Every 3×3 pattern has a past (no orphans this small). The empty 3×3 has 5,110,252 pasts (15.2%); the rarest, a ring of 8 around a dead centre, has 5,728. Entropy of the present: 7.40 bits of 9.
 
 Code: `src/engine/predecessors.ts`, UI: `src/ui/ancestorsView.ts`, `src/ui/pastFigure.ts`.
+
+## 20. Building with gliders
+
+A **glider synthesis** of an object $X$ is a set of far-apart gliders that eventually becomes exactly $X$. Its **glider cost** is
+
+$$c(X) = \min\{\, n : \text{some } n \text{ gliders become } X \,\}.$$
+
+One glider stays a glider, so every other object costs at least 2.
+
+- **Every two-glider crash** (`twoGliderCatalogue`): fix glider A flying down and right. Glider B flies up-left (head on), down-left or up-right (at right angles); the fourth direction is parallel and never meets A. Up to moving the picture in space and time, B is fixed by its lane (shifted across the line along which it closes on A) and its phase (0 to 3 generations of delay). Lanes −12 to 12 are tried, and the tests check that every outer lane misses, so the catalogue is complete: 300 settings (mirror images counted separately), 126 touch, 49 destroy both.
+- **Cost exactly 2**: the only named objects left on their own are the block, blinker, beehive, pond, boat, loaf and eater. Every other object costs at least 3.
+- **Building in stages** (`findRecipes`): take each clean product (no gliders, at most two objects) and fire one more glider at it from 4 directions × 17 lanes × 4 phases. Three gliders reach the ship and tub (so $c = 3$ for both); four reach the beacon and long boat ($c \le 4$; a three-glider crash with all three arriving together could still beat it, since the search waits for each reaction to settle).
+- **Not everything can be built**: a Garden of Eden has no parent, so no set of gliders becomes one.
+- The recipes are kept in `RECIPES` and the tests run each one with every glider in flight from the start (`recipeStart`, later gliders starting 50 diagonal steps further back per stage).
+
+Code: `src/engine/synthesis.ts`, UI: `src/ui/synthView.ts`, game chapter 6 in `src/engine/game.ts`.

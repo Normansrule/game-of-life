@@ -904,7 +904,7 @@ table.data, .mini-table { display: block; overflow-x: auto; max-width: 100%; }
 .game-play h3 { margin: var(--sp-h) 0 4px; font-size: var(--fs-xl); }
 .game-goal { font: var(--fs-lg) / 1.55 var(--text); margin: 0 0 var(--sp-h); max-width: 62ch; }
 .game-stage { display: grid; justify-items: center; gap: var(--sp-h); }
-.game-board { display: block; width: 100%; max-width: 560px; max-height: 58vh; border-radius: var(--radius-sm); box-shadow: var(--shadow-board); touch-action: manipulation; }
+.game-board { display: block; width: min(100%, 560px, calc(58vh * var(--ar, 1))); max-height: 58vh; border-radius: var(--radius-sm); box-shadow: var(--shadow-board); touch-action: manipulation; }
 .game-board[tabindex='0'] { cursor: pointer; }
 .game-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-h); width: 100%; max-width: 720px; }
 .game-pair figure { margin: 0; display: grid; gap: 6px; justify-items: center; }
@@ -939,3 +939,36 @@ table.data, .mini-table { display: block; overflow-x: auto; max-width: 100%; }
 @media (prefers-reduced-motion: reduce) { .game-apply.reveal { animation: none; } .game-stone { transition: none; } }
 .game-ash-note { text-align: center; }
 .game .kicker { font: 650 var(--fs-xs) / 1.3 var(--ui); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0; }
+
+/* ---------- Synthesis: building with gliders ---------- */
+.game-dir { display: inline-flex; }
+.game-dir .ico { width: 16px; height: 16px; }
+.synth-layout { display: grid; grid-template-columns: minmax(200px, 250px) minmax(0, 1fr) minmax(240px, 320px); column-gap: var(--sp-2); align-items: start; padding-top: var(--sp-h); }
+@media (max-width: 1100px) { .synth-layout { grid-template-columns: minmax(200px, 250px) minmax(0, 1fr); } .synth-catalogue { grid-column: 1 / -1; } }
+@media (max-width: 760px) { .synth { padding: 0 16px var(--sp-2); } .synth-layout { grid-template-columns: minmax(0, 1fr); } }
+.synth-book { list-style: none; margin: var(--sp-h) 0 0; padding: 0; display: grid; gap: 6px; }
+@media (max-width: 760px) { .synth-book { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.synth-recipe { width: 100%; display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 6px 10px 6px 6px; text-align: left; border-radius: var(--radius); }
+.synth-recipe.on { outline: 2px solid var(--ink); outline-offset: 1px; }
+.synth-thumb { width: 44px; height: 44px; border-radius: var(--radius-sm); display: block; }
+.synth-name { font-weight: 600; }
+.synth-cost { display: inline-flex; gap: 3px; }
+.synth-cost i { width: 9px; height: 9px; border-radius: 50%; background: var(--slate); }
+:root[data-theme='dark'] .synth-cost i { background: var(--shell); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) .synth-cost i { background: var(--shell); } }
+.synth-lab { display: grid; justify-items: center; gap: 8px; }
+.synth-lab .kicker { justify-self: start; }
+.synth-stage { margin: 0; color: var(--ink-2); min-height: 1.4em; text-align: center; }
+.synth-status { min-height: 1.6em; margin: 0; text-align: center; font-weight: 550; max-width: 60ch; }
+.synth-chart { display: grid; gap: 4px; margin: var(--sp-h) 0 8px; }
+.synth-bar { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) 2.2em; align-items: center; gap: 8px; padding: 3px 6px; min-height: 0; border: none; background: none; text-align: left; font-size: var(--fs-sm); border-radius: var(--radius-sm); }
+.synth-bar:hover { background: var(--surface); }
+.synth-bar-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.synth-bar-track { height: 10px; background: var(--surface); border-radius: 999px; overflow: hidden; }
+.synth-bar-fill { display: block; height: 100%; background: var(--data-pine); border-radius: 999px; }
+.synth-bar .readout { text-align: right; }
+.math-table { border-collapse: collapse; width: 100%; max-width: 560px; margin: 0 auto; font-size: var(--fs-sm); }
+.math-table th, .math-table td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--rule); }
+.math-table th { font-weight: 650; color: var(--ink-2); }
+.math-table td:nth-child(2) { font-variant-numeric: tabular-nums; }
+@media (max-width: 760px) { .synth-lab { order: -1; } }

@@ -167,6 +167,7 @@ export class GameBoard {
   draw() {
     const cv = this.canvas;
     cv.style.aspectRatio = `${this.o.w} / ${this.o.h}`;
+    cv.style.setProperty('--ar', String(this.o.w / this.o.h));
     if (!cv.clientWidth) return;
     fitCanvas(cv);
     const ctx = cv.getContext('2d')!;

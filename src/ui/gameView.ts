@@ -1,5 +1,5 @@
 /**
- * Play: the game. Eight chapters, one idea each. A chapter states its idea
+ * Play: the game. Nine chapters, one idea each. A chapter states its idea
  * and its formula, sets levels that can only be won by using the idea, and
  * once they are won shows where the same idea is used outside the game.
  * Chapters unlock in order; progress and stars are kept in the browser.
@@ -9,8 +9,9 @@ import 'katex/dist/katex.min.css';
 import {
   CHAPTERS, type Chapter, DELAYS, LANES, type Level, type LevelScore, STAMPS, ashStars, censusText, chapterStars, checkPrediction,
   collide, collisionStart, collisionTable, findPeriod, isStill, judgeParent, judgeRace, judgeRule, measuredAsh, meanFieldFixedPoint,
-  neighbourCounts, rotate, ruleString, sameCensus, starsFor, torusSoup, SOUP,
+  neighbourCounts, rotate, ruleString, sameCensus, starsFor, torusSoup, SOUP, SYNTH_DIST, SYNTH_LANES, judgeSynth, synthesise,
 } from '../engine/game';
+import { type Dir, DIR_NAME, aim } from '../engine/synthesis';
 import { CLASS_INFO, RuleRun, langtonLambda } from '../engine/classify';
 import { parseRule } from '../engine/rules';
 import type { Cell } from '../engine/life';
@@ -96,7 +97,7 @@ export function createGameView(root: HTMLElement) {
   root.append(h('div.game', {},
     h('header.view-head', {},
       h('h1', {}, 'Play: learn Life by playing it'),
-      h('p', {}, 'Eight chapters, one idea each, from the rule itself to the edge of chaos. Each one states the idea and its maths, sets levels you can only win by using it, and then shows where the same idea is at work in the world outside the board.')),
+      h('p', {}, 'Nine chapters, one idea each, from the rule itself to the edge of chaos. Each one states the idea and its maths, sets levels you can only win by using it, and then shows where the same idea is at work in the world outside the board.')),
     h('div.game-path-row', {}, path, tally),
     h('div.game-layout', {},
       ideaPanel,
@@ -394,6 +395,58 @@ export function createGameView(root: HTMLElement) {
                 const n = collisionTable().filter((x) => sameCensus(x.result, l.target)).length;
                 win(`It left ${text}. ${n} of the 36 possible collisions do this.`);
               } else lose(`That collision left ${text}.`);
+              return false;
+            }
+          }, 45, 1, [...b.given, ...b.player]);
+        }, '.primary'));
+      place();
+      board(b);
+      return () => b.stop(false);
+    },
+
+    synth(l) {
+      goal.textContent = `${l.goal} Pick a direction, a lane and a delay for the white glider, then fire.`;
+      const base = l.base();
+      // Size the board to hold the black stones and every shot the controls can make.
+      const reach = [...base, ...l.dirs.flatMap((d) => [-SYNTH_LANES, SYNTH_LANES].flatMap((lane) => aim({ dir: d, lane, delay: 0 }, l.at, SYNTH_DIST)))];
+      const x0 = Math.min(...reach.map((c) => c[0])) - 2, y0 = Math.min(...reach.map((c) => c[1])) - 2;
+      const w = Math.max(...reach.map((c) => c[0])) - x0 + 3, hgt = Math.max(...reach.map((c) => c[1])) - y0 + 3;
+      const onBoard = (c: Cell[]) => c.map(([x, y]) => [x - x0, y - y0] as Cell);
+      const b = new GameBoard({ w, h: hgt, label: 'Gliders on a collision course' });
+      let dir: Dir = l.dirs[0], lane = 0, delay = 0;
+      const shot = () => ({ dir, lane, delay });
+      const laneOut = h('span.readout', {});
+      const turn: Record<Dir, number> = { NE: -45, SE: 45, SW: 135, NW: -135 };
+      const dirs = h('div.game-options', { role: 'group', 'aria-label': 'Direction' }, h('span.small', {}, 'Fly:'),
+        ...l.dirs.map((d) => h('button.game-option', { 'data-dir': d, 'aria-label': `Fly ${DIR_NAME[d]}`, title: `Fly ${DIR_NAME[d]}`, onclick: () => { dir = d; place(); } },
+          h('span.game-dir', { style: `transform: rotate(${turn[d]}deg)` }, icon('arrow')))));
+      const delays = h('div.game-options', { role: 'group', 'aria-label': 'Timing' }, h('span.small', {}, 'Hold back:'),
+        ...DELAYS.map((d) => btn(String(d), () => { delay = d; place(); }, '.game-option')));
+      const place = () => {
+        b.stop();
+        b.given = onBoard(base);
+        b.player = onBoard(aim(shot(), l.at, SYNTH_DIST));
+        laneOut.textContent = lane > 0 ? `+${lane}` : String(lane);
+        dirs.querySelectorAll('button').forEach((x) => x.classList.toggle('on', (x as HTMLElement).dataset.dir === dir));
+        delays.querySelectorAll('button').forEach((x, i) => x.classList.toggle('on', i === delay));
+        b.draw();
+      };
+      stage.append(b.canvas);
+      controls.append(
+        dirs,
+        h('div.game-options', { role: 'group', 'aria-label': 'Lane' }, h('span.small', {}, 'Lane:'),
+          btn([icon('minus')], () => { lane = Math.max(-SYNTH_LANES, lane - 1); place(); }, '.small.icon'), laneOut,
+          btn([icon('plus')], () => { lane = Math.min(SYNTH_LANES, lane + 1); place(); }, '.small.icon')),
+        delays,
+        btn([icon('play'), 'Fire'], () => {
+          const s = shot();
+          const verdict = judgeSynth(base, l.at, s, l.target);
+          const quiet = synthesise(base, l.at, s);
+          b.play((_, g) => {
+            say(`Generation ${g}`);
+            if (g >= 150 || !b.cells.length) {
+              b.stop(false);
+              if (verdict.ok) win(verdict.message); else if (quiet.missed) say(verdict.message); else lose(verdict.message);
               return false;
             }
           }, 45, 1, [...b.given, ...b.player]);

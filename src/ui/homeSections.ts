@@ -114,6 +114,7 @@ const GROUPS: [string, Card[]][] = [
   ['Trace where it came from', [
     { route: 'lineage', name: 'Lineage', what: 'A family tree of every object: which ones split, merged and died.', pattern: 'rpentomino' },
     { route: 'ancestors', name: 'Ancestors', what: 'Run the board backwards to find what could have come before.', pattern: 'piheptomino' },
+    { route: 'synth', name: 'Synthesis', what: 'Build blocks, ships and beacons by crashing gliders together.', pattern: 'glider' },
     { route: 'basins', name: 'State space', what: 'Map every state of a small board to where it ends up.', pattern: 'toad' },
   ]],
   ['Try other rules', [
@@ -121,12 +122,12 @@ const GROUPS: [string, Card[]][] = [
     { route: 'evolve', name: 'Evolution', what: 'Breed rules with a genetic algorithm and watch them get better at a task.', pattern: 'lwss' },
   ]],
   ['Play', [
-    { route: 'play', name: 'The game', what: 'Eight chapters that teach the maths by playing it, from the rule itself to the edge of chaos.', pattern: 'copperhead' },
+    { route: 'play', name: 'The game', what: 'Nine chapters that teach the maths by playing it, from the rule itself to the edge of chaos.', pattern: 'copperhead' },
     { route: 'puzzles', name: 'Puzzles', what: 'Ten challenges, from a still life to a spaceship, checked by the engine.', pattern: 'glider' },
     { route: 'duel', name: 'Duel', what: 'Life for two players: your black stones against the computer\u2019s white, over five rounds.', pattern: 'beacon' },
   ]],
   ['Understand it', [
-    { route: 'math', name: 'Math', what: 'Nineteen sections, from the rules themselves to running time backwards.', pattern: 'pentadecathlon' },
+    { route: 'math', name: 'Math', what: 'Twenty sections, from the rules themselves to building with gliders.', pattern: 'pentadecathlon' },
     { route: 'apps', name: 'Applications', what: 'Live models of traffic, heart rhythms, snowflakes and more.', pattern: 'rabbits' },
   ]],
 ];
