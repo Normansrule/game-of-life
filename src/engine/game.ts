@@ -12,6 +12,7 @@ import { mulberry32 } from './census';
 import { classifyRule, langtonLambda, type RuleClass } from './classify';
 import { parseRule } from './rules';
 import { patternCells } from './patterns';
+import { type Dir, type Shot, aim, build, centreOf, madeObjectCells, RECIPES, SETTLE, recipeStart, soleObject } from './synthesis';
 
 export const key = (x: number, y: number) => `${x},${y}`;
 const sameSet = (a: Cell[], b: Cell[]) => {
@@ -225,6 +226,37 @@ export function judgeRule(rule: string): RuleVerdict {
   return { cls: classifyRule(r, { size: 66, seed: 7 }).cls, lambda: langtonLambda(r), rule };
 }
 
+// ---------- chapter 6: building with gliders ----------
+
+/** How far back the aimed glider starts in the game, small enough to keep the board small. */
+export const SYNTH_DIST = 6;
+/** Lanes offered in the game. */
+export const SYNTH_LANES = 6;
+
+/** The first glider of every two-glider level: fixed, flying down and right, aimed at (0, 0). */
+export const fixedGlider = () => aim({ dir: 'SE', lane: 0, delay: 0 }, [0, 0], SYNTH_DIST);
+
+/** The object a recipe from the book leaves, where it leaves it. */
+export function recipeProduct(name: string): Cell[] {
+  const r = RECIPES.find((x) => x.name === name);
+  if (!r) throw new Error(`No recipe for ${name}`);
+  return madeObjectCells(evolveSparse(recipeStart(r), SETTLE));
+}
+
+export interface SynthOutcome { cells: Cell[]; census: Map<string, number>; missed: boolean; built: string | null }
+
+export function synthesise(base: Cell[], at: Cell, shot: Shot): SynthOutcome {
+  const r = build(base, [shot], at, SYNTH_DIST);
+  return { ...r, built: soleObject(r.census) };
+}
+
+export function judgeSynth(base: Cell[], at: Cell, shot: Shot, target: string): Result {
+  const r = synthesise(base, at, shot);
+  if (r.missed) return { ok: false, message: 'They missed each other: change the lane, or the direction.' };
+  if (r.built === target) return { ok: true, message: `It built ${/^[aeiou]/i.test(target) ? 'an' : 'a'} ${target.toLowerCase()}, and nothing else.` };
+  return { ok: false, message: `That left ${censusText(r.census)}.` };
+}
+
 // ---------- the chapters ----------
 
 export type Level =
@@ -233,6 +265,7 @@ export type Level =
   | { kind: 'period'; title: string; w: number; h: number; pattern: Cell[]; options: number[] }
   | { kind: 'race'; title: string; w: number; h: number; race: Race; stamps: string[] }
   | { kind: 'collide'; title: string; target: Map<string, number>; goal: string }
+  | { kind: 'synth'; title: string; base: () => Cell[]; at: Cell; dirs: Dir[]; target: string; goal: string }
   | { kind: 'parent'; title: string; w: number; h: number; target: Cell[]; maxStones: number }
   | { kind: 'ash'; title: string; start: number }
   | { kind: 'rule'; title: string; want: RuleClass; not?: string[] };
@@ -369,6 +402,29 @@ export const CHAPTERS: Chapter[] = [
       title: 'Computers from collisions',
       text: 'A NOT gate is a glider stream that is wiped out where an input glider is present. With guns as clocks and eaters as wire ends, people have built full computers in Life, including a Turing machine. Real hardware has its echo: billiard-ball and reversible logic, and the optical computers that let beams of light switch each other.',
       route: 'lineage', label: 'Trace collisions in the lineage tree',
+    },
+  },
+  {
+    id: 'build',
+    title: 'Building with gliders',
+    play: 'Build objects by crashing gliders',
+    idea: 'Gliders are cheap: a gun makes them for ever. Crash two together at the right lane and timing and they can leave a block, a blinker or a beehive behind. Fire more at the debris and you can build bigger things, one glider at a time. Finding the cheapest way to build an object like this is called glider synthesis.',
+    formula: 'c(X) = \\min\\{\\, n : n \\text{ gliders can build } X \\,\\}',
+    formulaNote: 'The glider cost of an object. Two gliders can build a block, so c(block) = 2. One glider alone can only stay a glider, so nothing costs less.',
+    levels: [
+      { kind: 'synth', title: 'A block from two gliders', base: fixedGlider, at: [0, 0], dirs: ['NW', 'SW', 'NE'], target: 'Block', goal: 'Aim the white glider so that the two of them leave a single block and nothing else.' },
+      { kind: 'synth', title: 'A beehive from two gliders', base: fixedGlider, at: [0, 0], dirs: ['NW', 'SW', 'NE'], target: 'Beehive', goal: 'Now leave a single beehive. Head-on crashes won\'t do it: try one of the other directions.' },
+      { kind: 'synth', title: 'A third glider makes a ship', base: () => recipeProduct('Pond'), at: centreOf(recipeProduct('Pond')), dirs: ['SE', 'SW', 'NE', 'NW'], target: 'Ship', goal: 'Two gliders have already built a pond. Fire a third glider at it so that it becomes a ship.' },
+    ],
+    hints: [
+      'Fire it up and to the left, head on, in lane −6, held back 3 generations.',
+      'Fire it down and to the left, at right angles to the black one, in lane −3, with no delay.',
+      'Fire it down and to the right, straight at the middle of the pond: lane 0, no delay.',
+    ],
+    application: {
+      title: 'Building from simple parts',
+      text: 'Building something from a stream of simple pieces is how a ribosome makes a protein, one amino acid at a time, and how chemists plan a synthesis, one reaction at a time. John von Neumann invented cellular automata to show that a machine could build any machine, even a copy of itself. In Life that came true in 2010 with Gemini, a pattern that builds a copy of itself from streams of gliders.',
+      route: 'synth', label: 'Open the synthesis lab',
     },
   },
   {

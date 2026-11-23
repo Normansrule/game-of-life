@@ -53,6 +53,7 @@ export function knownObjects(): Map<string, KnownObject> {
     ['Long boat', [[0, 0], [1, 0], [0, 1], [2, 1], [1, 2], [3, 2], [2, 3]], 'still life', 1],
     ['Snake', [[0, 0], [1, 0], [3, 0], [0, 1], [2, 1], [3, 1]], 'still life', 1],
     ['Aircraft carrier', [[0, 0], [1, 0], [0, 1], [3, 1], [2, 2], [3, 2]], 'still life', 1],
+    ['Eater', [[0, 0], [1, 0], [0, 1], [2, 1], [2, 2], [2, 3], [3, 3]], 'still life', 1],
   ];
   for (const [name, cells, kind, period] of extra) table.set(canonicalKey(cells), { name, kind, period });
   return table;

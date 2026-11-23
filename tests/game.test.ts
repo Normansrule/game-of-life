@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   CHAPTERS, STAMPS, ashStars, checkPrediction, collide, collisionTable, censusText, isStill, judgeParent, judgeRace, judgeRule,
-  measuredAsh, meanField, meanFieldFixedPoint, neighbourCounts, rotate, sameCensus, starsFor,
+  measuredAsh, meanField, meanFieldFixedPoint, neighbourCounts, rotate, sameCensus, starsFor, judgeSynth, synthesise, SYNTH_LANES,
 } from '../src/engine/game';
 import { evolveSparse, type Cell } from '../src/engine/life';
 import { findPeriod } from '../src/engine/objects';
@@ -10,8 +10,8 @@ import { patternCells } from '../src/engine/patterns';
 const level = <K extends string>(chapter: string, kind: K) => CHAPTERS.find((c) => c.id === chapter)!.levels.filter((l) => l.kind === kind) as any[];
 
 describe('the game', () => {
-  it('has eight chapters, each with an idea, a formula, hints for every level and an application', () => {
-    expect(CHAPTERS).toHaveLength(8);
+  it('has nine chapters, each with an idea, a formula, hints for every level and an application', () => {
+    expect(CHAPTERS).toHaveLength(9);
     for (const c of CHAPTERS) {
       expect(c.levels.length).toBeGreaterThan(0);
       expect(c.hints).toHaveLength(c.levels.length);
@@ -73,6 +73,24 @@ describe('the game', () => {
     expect(table.filter((r) => sameCensus(r.result, new Map([['Glider', 1]])))).toHaveLength(2);
     expect(censusText(collide(-4, 0))).toBe('2 gliders');
     expect(censusText(collide(0, 0))).toBe('nothing at all');
+  });
+
+  it('building with gliders: every level can be won within the lanes offered, and its hint is a winning shot', () => {
+    const c = CHAPTERS.find((x) => x.id === 'build')!;
+    const hinted = [{ dir: 'NW', lane: -6, delay: 3 }, { dir: 'SW', lane: -3, delay: 0 }, { dir: 'SE', lane: 0, delay: 0 }] as const;
+    c.levels.forEach((l: any, i) => {
+      let wins = 0;
+      for (const dir of l.dirs) for (let lane = -SYNTH_LANES; lane <= SYNTH_LANES; lane++) for (let delay = 0; delay < 4; delay++)
+        if (synthesise(l.base(), l.at, { dir, lane, delay }).built === l.target) wins++;
+      expect(wins, l.title).toBeGreaterThan(0);
+      expect(l.dirs).toContain(hinted[i].dir);
+      expect(judgeSynth(l.base(), l.at, { ...hinted[i] }, l.target).ok, l.title).toBe(true);
+    });
+    // No head-on crash leaves a lone beehive, as the level says.
+    const hive = c.levels[1] as any;
+    for (let lane = -SYNTH_LANES; lane <= SYNTH_LANES; lane++) for (let delay = 0; delay < 4; delay++)
+      expect(synthesise(hive.base(), hive.at, { dir: 'NW', lane, delay }).built).not.toBe('Beehive');
+    expect(judgeSynth(hive.base(), hive.at, { dir: 'NW', lane: 6, delay: 0 }, 'Beehive').message).toMatch(/missed/);
   });
 
   it('chapter 6: every target has a parent within the stone limit', () => {

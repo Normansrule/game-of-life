@@ -13,6 +13,7 @@ import { createDuelView } from './ui/duelView';
 import { createAncestorsView } from './ui/ancestorsView';
 import { createGuideView } from './ui/guideView';
 import { createGameView } from './ui/gameView';
+import { createSynthView } from './ui/synthView';
 import { on } from './ui/bus';
 import { setupGetApp } from './ui/getApp';
 import { h } from './ui/dom';
@@ -36,6 +37,7 @@ const routes: Record<string, (root: HTMLElement) => View> = {
   lineage: createLineageView,
   basins: createBasinView,
   ancestors: createAncestorsView,
+  synth: createSynthView,
   space: createSpacetimeView,
   deep: createDeepView,
   atlas: createAtlasView,

@@ -1,5 +1,15 @@
 # Changelog
 
+## 9.1.0
+
+- **Synthesis, building with gliders.** A new tab. The engine tries every way a second glider can meet a first one, head on or at right angles, in every lane and with every timing: 300 settings, of which 126 touch. A chart shows what they leave (49 destroy both), and picking a bar plays that crash. Seven objects come out on their own from two gliders: a block, blinker, beehive, pond, boat, loaf and an eater.
+- **A recipe book.** For every clean product, the search fires one more glider from each direction, lane and timing, and keeps the cheapest way to make each object. Three gliders make a ship or a tub; four make a beacon or a long boat. Pick a recipe and the lab builds it a glider at a time, then keep firing your own gliders at the result and the lab says what you made and whether you beat the book. `#synth/<object>` links to a recipe.
+- **A new chapter in Play.** Chapter 6, "Building with gliders", has three levels: build a block, then a beehive (only a right-angle crash will do), then turn a pond into a ship with a third glider. It unlocks where the idea is used: ribosomes, chemical synthesis and machines that build copies of themselves. The game now has nine chapters and 25 levels.
+- **Math §20, Building with gliders.** The glider cost of an object, why the two-glider catalogue is complete, which objects cost exactly 2, and why a Garden of Eden can never be built, with the recipe book as a table.
+- **Eaters have a name.** The engine now recognises the eater (fishhook), so lineage trees and censuses label it.
+- **Game boards keep their shape.** A board that's wider than it is tall no longer leaves an empty strip beside it when the window is short.
+- Six tests for synthesis and one more for the game (111 in total). Every recipe is checked with all its gliders in flight from the start.
+
 ## 9.0.0
 
 - **Play, a game that teaches the maths.** A new tab, linked from the top of the home page ("Learn it by playing") and first among the view cards. Eight chapters walk a path from the rule itself to the edge of chaos: predict the next generation, repair a still life with one stone, count a period, race a glider or spaceship to a flag against the speed of light, aim two gliders so their collision vanishes, leaves a block or lets one through, draw a pattern's parent, guess how much of a random soup survives, and design a rule that boils and one that makes structure. That's 22 levels in all.
